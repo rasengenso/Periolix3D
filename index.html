@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Periolix 3D — インタラクティブ円錐スパイラル周期表</title>
+
+<!-- 
+    ==================================================
+    Project: Periolix 3D (Interactive Conical Helix Periodic Table)
+    Author: らせん元素
+    First Published: 2026
+    Description: 円錐状の立体螺旋で表現する新しい周期表フォーマット
+    ==================================================
+  -->
+
+    <style>
+        :root {
+            --vw: 1vw;
+            --vh: 1vh;
+            --fluid-scale: clamp(0.75, 0.5 + 0.6 * var(--vw), 1.35);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+        
+        html, body {
+            width: 100%; height: 100%; overflow: hidden;
+            background: #030712;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            color: #f8fafc;
+        }
+
+        #canvas {
+            position: absolute; top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            display: block; cursor: grab; z-index: 1;
+            touch-action: none;
+        }
+        #canvas:active { cursor: grabbing; }
+
+        /* ① 左上のロゴ（説明文を少し大きく） */
+        .ui-panel {
+            position: absolute; top: clamp(8px, 1.5vh, 20px); left: clamp(8px, 1.5vw, 20px); z-index: 10;
+            background: transparent; border: none; padding: 0; box-shadow: none; backdrop-filter: none;
+            pointer-events: none;
+            max-width: clamp(170px, 24vw, 240px);
+            display: flex; flex-direction: column; gap: clamp(6px, 1vh, 10px);
+        }
+        .ui-panel img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .ui-subtext {
+            font-size: clamp(0.68rem, 0.6rem + 0.22vw, 0.82rem);
+            color: #94a3b8;
+            font-weight: 600;
+            line-height: 1.4;
+            text-shadow: 0 0 5px rgba(0, 240, 255, 0.2);
+        }
+
+        /* ② 画面中央一番上の凡例パネル（サイズ・表記のレスポンシブ調整） */
+        .top-legend {
+            position: absolute; top: clamp(8px, 1.5vh, 20px); left: 50%; transform: translateX(-50%); z-index: 10;
+            display: flex; gap: clamp(8px, 1.5vw, 18px); background: rgba(15, 23, 42, 0.9);
+            padding: clamp(6px, 0.9vh, 10px) clamp(14px, 1.8vw, 22px); 
+            border-radius: 12px;
+            font-size: clamp(0.68rem, 0.6rem + 0.25vw, 0.85rem); font-weight: bold;
+            color: #cbd5e1; border: 1px solid rgba(0, 240, 255, 0.4);
+            box-shadow: 0 4px 15px rgba(0, 240, 255, 0.15);
+            pointer-events: auto;
+        }
+        .dot { width: clamp(7px, 0.9vw, 10px); height: clamp(7px, 0.9vw, 10px); border-radius: 50%; display: inline-block; margin-right: 5px; box-shadow: 0 0 5px currentColor; }
+
+        /* ② 操作ボタンのレスポンシブ化 */
+        .controls {
+            position: absolute; top: clamp(8px, 1.5vh, 20px); right: clamp(8px, 1.5vw, 20px); z-index: 10;
+            display: flex; flex-direction: column; gap: clamp(5px, 0.9vh, 10px);
+        }
+        .btn-group { display: flex; gap: clamp(4px, 0.6vw, 8px); }
+        .btn {
+            background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(168, 85, 247, 0.6);
+            color: #d8b4fe; padding: clamp(6px, 0.9vh, 10px) clamp(10px, 1.2vw, 16px); 
+            border-radius: clamp(6px, 0.8vw, 10px); 
+            font-size: clamp(0.72rem, 0.62rem + 0.35vw, 0.9rem);
+            font-weight: bold; cursor: pointer; transition: 0.2s; text-align: center;
+            box-shadow: 0 0 10px rgba(168, 85, 247, 0.15);
+        }
+        .btn:hover { background: rgba(168, 85, 247, 0.2); color: #ffffff; border-color: #a855f7; box-shadow: 0 0 15px rgba(168, 85, 247, 0.4); }
+        .btn-zoom { flex: 1; font-size: clamp(0.8rem, 0.68rem + 0.45vw, 1.05rem); padding: clamp(4px, 0.6vh, 8px); }
+
+        /* 右下グループ（軌道ビューアパネル） */
+        .right-bottom-group {
+            position: absolute; bottom: clamp(8px, 1.5vh, 20px); right: clamp(8px, 1.5vw, 20px); z-index: 10;
+            display: none; flex-direction: column; gap: 0; pointer-events: none;
+        }
+        .right-bottom-group > * { pointer-events: auto; }
+
+        /* 軌道ビューアパネル */
+        .orbital-preview-panel {
+            background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(14px);
+            border: 1px solid rgba(0, 240, 255, 0.5); 
+            padding: calc(8px * var(--scale, 1)) calc(10px * var(--scale, 1));
+            border-radius: 14px;
+            width: clamp(200px, 24vw, 250px); 
+            aspect-ratio: 240 / 220; text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 240, 255, 0.15);
+            display: flex; flex-direction: column; justify-content: space-between;
+            font-size: calc(1rem * var(--scale, 1));
+            overflow: hidden; position: relative;
+        }
+        .resize-handle-tl {
+            position: absolute; top: 0; left: 0; width: 16px; height: 16px;
+            cursor: nwse-resize; z-index: 30;
+            border-top: 3px solid #00f0ff; border-left: 3px solid #00f0ff;
+            border-top-left-radius: 14px;
+        }
+
+        .orbital-preview-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; flex-shrink: 0;
+        }
+        .orbital-preview-title {
+            font-size: calc(0.78rem * var(--scale, 1)); font-weight: 800; color: #00f0ff;
+            font-family: monospace; letter-spacing: 0.5px;
+        }
+        .unpin-btn {
+            background: transparent; border: none;
+            font-size: calc(1rem * var(--scale, 1)); cursor: pointer; transition: transform 0.2s;
+            line-height: 1; padding: 2px; color: #f8fafc;
+        }
+        .unpin-btn:hover { transform: scale(1.25); }
+
+        .orbital-canvas-box {
+            width: 100%; flex-grow: 1; min-height: 0; border-radius: 6px;
+            background: radial-gradient(circle, rgba(15,23,42,0.9) 0%, rgba(2,6,23,0.95) 100%);
+            border: 1px solid rgba(168, 85, 247, 0.4);
+            position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;
+            box-shadow: inset 0 0 12px rgba(0, 240, 255, 0.1);
+        }
+        #orbitalCanvas { width: 100%; height: 100%; display: block; }
+        .orbital-info {
+            font-size: calc(0.78rem * var(--scale, 1)); color: #38bdf8; margin-top: 2px; font-family: monospace; font-weight: bold; flex-shrink: 0;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        /* 元素情報詳細カード */
+        .card {
+            position: absolute; bottom: clamp(8px, 1.5vh, 20px); left: clamp(8px, 1.5vw, 20px); z-index: 20;
+            background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 0, 127, 0.6); 
+            padding: calc(8px * var(--card-scale, 1)) calc(10px * var(--card-scale, 1)); border-radius: 12px;
+            width: clamp(220px, 24vw, 290px); 
+            aspect-ratio: 260 / 350; overflow: hidden; display: none; flex-direction: column; justify-content: space-between; pointer-events: auto;
+            box-shadow: 0 0 30px rgba(255, 0, 127, 0.25);
+            transition: border-color 0.2s, box-shadow 0.2s;
+            font-size: calc(1rem * var(--card-scale, 1));
+        }
+        .resize-handle-tr {
+            position: absolute; top: 0; right: 0; width: 18px; height: 18px;
+            cursor: nesw-resize; z-index: 30;
+            border-top: 3px solid #ff007f; border-right: 3px solid #ff007f;
+            border-top-right-radius: 12px;
+        }
+
+        .card.pinned {
+            border-color: rgba(0, 240, 255, 0.8);
+            box-shadow: 0 0 35px rgba(0, 240, 255, 0.35);
+        }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; flex-shrink: 0; }
+        .card-header-left { display: flex; align-items: center; gap: calc(8px * var(--card-scale, 1)); }
+        
+        .card-num { font-size: calc(0.88rem * var(--card-scale, 1)); color: #ff007f; font-weight: 800; font-family: monospace; }
+        .card-mass { font-size: calc(0.80rem * var(--card-scale, 1)); color: #94a3b8; font-weight: 700; font-family: monospace; }
+
+        .card-main { display: flex; align-items: center; gap: calc(10px * var(--card-scale, 1)); margin: 2px 0; flex-shrink: 0; }
+        .card-sym { font-size: calc(1.9rem * var(--card-scale, 1)); font-weight: 900; color: #f8fafc; line-height: 1; font-family: monospace; text-shadow: 0 0 10px rgba(255,255,255,0.4); }
+        .card-names { display: flex; flex-direction: column; }
+        .card-name-ja { font-size: calc(1.05rem * var(--card-scale, 1)); font-weight: bold; color: #f1f5f9; }
+        .card-name-en { font-size: calc(0.72rem * var(--card-scale, 1)); color: #94a3b8; font-weight: 600; font-family: monospace; }
+
+        .card-atom-box {
+            width: 100%; flex-grow: 1; min-height: 0; border-radius: 6px; overflow: hidden;
+            background: rgba(2, 6, 23, 0.7); border: 1px solid rgba(0, 240, 255, 0.3); margin: 3px 0;
+            position: relative; display: flex; align-items: center; justify-content: center;
+        }
+        #atomCanvas { width: 100%; height: 100%; display: block; }
+
+        .card-tabs { display: flex; gap: calc(5px * var(--card-scale, 1)); margin-bottom: 4px; flex-shrink: 0; }
+        .tab-btn {
+            flex: 1; padding: calc(3px * var(--card-scale, 1)) 0; font-size: calc(0.68rem * var(--card-scale, 1)); font-weight: bold;
+            background: rgba(15, 23, 42, 0.7); color: #94a3b8; border: 1px solid #334155;
+            border-radius: 4px; cursor: pointer; text-align: center; transition: 0.2s;
+        }
+        .tab-btn.active { background: #00f0ff; color: #020617; border-color: #00f0ff; font-weight: 900; }
+
+        .tab-content { display: none; font-size: calc(0.72rem * var(--card-scale, 1)); color: #cbd5e1; flex-shrink: 0; }
+        .tab-content.active { display: block; }
+
+        .info-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 3px 6px;
+            background: rgba(2, 6, 23, 0.5); padding: 4px 8px; border-radius: 5px; border: 1px solid #1e293b;
+            margin-bottom: 4px;
+        }
+        .info-label { color: #94a3b8; font-weight: 600; font-size: calc(0.68rem * var(--card-scale, 1)); }
+        .info-val { color: #38bdf8; font-weight: bold; font-family: monospace; font-size: calc(0.68rem * var(--card-scale, 1)); }
+
+        .card-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 3px; flex-shrink: 0; }
+        .tag { font-size: calc(0.65rem * var(--card-scale, 1)); padding: 2px 6px; border-radius: 3px; font-weight: bold; font-family: monospace; }
+        .tag-cat { background: rgba(225, 29, 72, 0.2); color: #fb7185; border: 1px solid rgba(225, 29, 72, 0.4); }
+        .tag-origin { background: rgba(29, 78, 216, 0.2); color: #60a5fa; border: 1px solid rgba(29, 78, 216, 0.4); }
+        .tag-state { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+
+        /* ③ フッター文字をもう少し大きく */
+        footer {
+            position: absolute; bottom: 4px; left: 0; width: 100%;
+            z-index: 5; font-size: clamp(0.65rem, 0.58rem + 0.18vw, 0.78rem); color: #94a3b8;
+            text-align: center; pointer-events: none;
+            font-weight: 600;
+            line-height: 1.4;
+            text-shadow: 0 0 6px rgba(0, 240, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3Dレンダリング用HTML5 Canvas -->
+    <canvas id="canvas"></canvas>
+
+    <!-- 画面左上のロゴパネル -->
+    <div class="ui-panel">
+        <img src="logo.svg" alt="PERIOLIX 3D Logo">
+        <div class="ui-subtext">画面ドラッグ/スワイプで、3D周期表を好きな角度で表示できます。<br>元素をクリック/タッチすると元素カードと軌道ビューアが表示されます。</div>
+    </div>
+
+    <!-- 画面中央一番上の凡例パネル -->
+    <div class="top-legend">
+        <span><span class="dot" style="color:#ff0055; background:#ff0055;"></span>sブロック</span>
+        <span><span class="dot" style="color:#00d2ff; background:#00d2ff;"></span>pブロック</span>
+        <span><span class="dot" style="color:#ffb700; background:#ffb700;"></span>dブロック</span>
+        <span><span class="dot" style="color:#a855f7; background:#a855f7;"></span>fブロック</span>
+    </div>
+
+    <!-- 画面左下に固定の元素情報詳細カード（初期非表示） -->
+    <div class="card" id="card">
+        <div class="resize-handle-tr" id="cardResizeHandle"></div>
+        <div>
+            <div class="card-header">
+                <div class="card-header-left">
+                    <span class="card-num" id="c-num">#01</span>
+                    <span class="card-mass" id="c-mass">原子量: 1.008</span>
+                </div>
+                <button class="unpin-btn" onclick="unpinCard(event)" title="ロック解除">×</button>
+            </div>
+            <div class="card-main">
+                <div class="card-sym" id="c-sym">H</div>
+                <div class="card-names">
+                    <span class="card-name-ja" id="c-name-ja">水素</span>
+                    <span class="card-name-en" id="c-name-en">Hydrogen</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 電子模型アニメーションを描画するCanvas -->
+        <div class="card-atom-box">
+            <canvas id="atomCanvas"></canvas>
+        </div>
+
+        <div>
+            <div class="card-tabs">
+                <div class="tab-btn active" id="btn-tab-basic" onclick="switchTab('basic')">基本情報</div>
+                <div class="tab-btn" id="btn-tab-hazard" onclick="switchTab('hazard')">物性データ</div>
+                <div class="tab-btn" id="btn-tab-use" onclick="switchTab('use')">特徴・用途</div>
+            </div>
+
+            <div class="tab-content active" id="tab-basic">
+                <div class="info-grid">
+                    <div><span class="info-label">周期: </span><span class="info-val" id="c-period">第1周期</span></div>
+                    <div><span class="info-label">族: </span><span class="info-val" id="c-group">1族</span></div>
+                    <div style="grid-column: span 2;"><span class="info-label">結晶構造: </span><span class="info-val" id="c-crystal">分子結晶</span></div>
+                    <div style="grid-column: span 2;"><span class="info-label">CAS番号: </span><span class="info-val" id="c-cas">1333-74-0</span></div>
+                </div>
+                <div style="background:rgba(168,85,247,0.1); padding:4px 8px; border-radius:4px; border:1px solid rgba(168,85,247,0.3);">
+                    <div style="color:#d8b4fe; font-size:calc(0.65rem * var(--card-scale, 1)); font-weight:bold; font-family:monospace;">電子配置</div>
+                    <div id="c-elec-code" style="color:#f43f5e; font-weight:bold; font-family:monospace; font-size:calc(0.7rem * var(--card-scale, 1));">1s<sup>1</sup></div>
+                    <div id="c-elec-shells" style="color:#94a3b8; font-size:calc(0.7rem * var(--card-scale, 1)); font-family:monospace;">殻: 1</div>
+                    <div id="c-elec-note" style="display:none; margin-top:3px; padding:2px 4px; background:rgba(255,0,127,0.15); border-left:3px solid #ff007f; color:#ff7597; font-size:calc(0.62rem * var(--card-scale, 1)); font-weight:bold; line-height:1.2;"></div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-hazard">
+                <div class="info-grid">
+                    <div><span class="info-label">融点: </span><span class="info-val" id="c-mp">-259.1°C</span></div>
+                    <div><span class="info-label">沸点: </span><span class="info-val" id="c-bp">-252.9°C</span></div>
+                    <div><span class="info-label">密度: </span><span class="info-val" id="c-density">0.0899 g/L</span></div>
+                    <div><span class="info-label">原子半径: </span><span class="info-val" id="c-radius">53 pm</span></div>
+                    <div><span class="info-label">電気陰性度: </span><span class="info-val" id="c-en">2.20</span></div>
+                    <div><span class="info-label">熱伝導率: </span><span class="info-val" id="c-thermal">0.18 W/(m·K)</span></div>
+                    <div><span class="info-label">電気伝導率: </span><span class="info-val" id="c-elec-cond">ー</span></div>
+                    <div style="grid-column: span 2;"><span class="info-label">イオン化E: </span><span class="info-val" id="c-ie">13.6 eV (1312 kJ/mol)</span></div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-use">
+                <div style="background:rgba(2,6,23,0.8); padding:6px; border-radius:5px; border:1px solid #1e293b;">
+                    <div id="c-uses" style="color:#cbd5e1; line-height:1.35; font-size:calc(0.72rem * var(--card-scale, 1));"></div>
+                </div>
+            </div>
+
+            <div class="card-tags">
+                <span class="tag tag-cat" id="c-cat">非金属元素</span>
+                <span class="tag tag-origin" id="c-tag-origin">天然元素</span>
+                <span class="tag tag-state" id="c-state-tag">気体</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 画面右下に固定の軌道ビューアパネル（初期非表示） -->
+    <div class="right-bottom-group" id="rightBottomGroup">
+        <div class="orbital-preview-panel" id="orbitalPanel">
+            <div class="resize-handle-tl" id="orbitalResizeHandle"></div>
+            <div class="orbital-preview-header">
+                <div class="orbital-preview-title" id="orbital-title">3D軌道ビューア</div>
+                <button class="unpin-btn" onclick="closeOrbitalPanel(event)" title="閉じる">×</button>
+            </div>
+            <div class="orbital-canvas-box">
+                <canvas id="orbitalCanvas"></canvas>
+            </div>
+            <div class="orbital-info" id="orbital-sub">
+                <span id="sub-name">d<sub>z²</sub>軌道</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 視点操作・回転・ズーム用コントロールボタン -->
+    <div class="controls">
+        <div class="btn-group">
+            <button class="btn btn-zoom" onclick="changeZoom(0.2)">＋ 拡大</button>
+            <button class="btn btn-zoom" onclick="changeZoom(-0.2)">－ 縮小</button>
+        </div>
+        <button class="btn" onclick="toggleAutoRotate()">回転 ON/OFF</button>
+        <button class="btn" onclick="resetView()">視点リセット</button>
+    </div>
+
+    <!-- フッター（Rays Counterを組み込み、All Rights Reserved.の左側に綺麗に配置） -->
+    <footer>
+        Primary data sources: IUPAC and NIST Chemistry WebBook<br>
+        ACCESS COUNT:
+        <!-- Rays Counterのシステムを裏で動かしつつ、CSSで不要な絵を消して文字サイズと色に完全に馴染ませる部分 -->
+        <span style="display: inline-block; vertical-align: middle; height: 1.1em; overflow: hidden; position: relative; top: -1px;">
+            <table border="0" cellspacing="0" cellpadding="0" style="margin-top: -14px;">
+                <tr>
+                    <td align="center"><a href="https://www.rays-counter.com/"><img src="https://www.rays-counter.com/d1312_f8_018/6ad319cc68a06/" alt="アクセスカウンター" border="0" style="display:none;"></a></td>
+                </tr>
+                <tr>
+                    <td align="center">
+                        <img src="https://www.rays-counter.com/images/counter_01.gif" border="0" style="height: 1.1em; width: auto;"><img src="https://www.rays-counter.com/images/counter_02.gif" border="0" style="height: 1.1em; width: auto;"><img src="https://www.rays-counter.com/images/counter_03.gif" border="0" style="height: 1.1em; width: auto;"><img src="https://www.rays-counter.com/images/counter_04.gif" border="0" style="height: 1.1em; width: auto;"><img src="https://www.rays-counter.com/images/counter_05.gif" border="0" style="height: 1.1em; width: auto;">
+                    </td>
+                </tr>
+            </table>
+        </span> &copy; 2026 らせん元素. All rights reserved.
+    </footer>
+
+    <!-- 外部データファイルの読み込み -->
+    <script src="data.js"></script>
+
+    <script>
+        const RAW_DATA = [];
+        ORIGINAL_RAW.forEach(orig => {
+            RAW_DATA.push([...orig]);
+        });
+
+        const COLOR_MAP = {
+            s: { base: '#ff0055', highlight: '#ff7597', dark: '#880022' },
+            p: { base: '#00d2ff', highlight: '#70e7ff', dark: '#005b8a' },
+            d: { base: '#ffb700', highlight: '#ffe066', dark: '#996600' },
+            f: { base: '#a855f7', highlight: '#d8b4fe', dark: '#581c87' }
+        };
+
+        const PERIOD_COLORS = [
+            '#a855f7', '#00d2ff', '#34d399', '#a3e635', '#ffb700', '#ff7597', '#ff0055'
+        ];
+
+        const nodes = [];
+
+        function calcSpiralPos(period, groupVal) {
+            const baseR = 110 + period * 55;
+            const groupAngle = ((groupVal - 1) / 18) * Math.PI * 2;
+            const periodOffset = (period - 1) * 0.15;
+            const angle = groupAngle + periodOffset;
+            const baseY = (5 - period) * 115;
+
+            return { x: Math.cos(angle) * baseR, y: baseY, z: Math.sin(angle) * baseR, angle, baseR, baseY };
+        }
+
+        RAW_DATA.forEach(d => {
+            const [num, sym, nameJa, nameEn, mass, block, period, group, state, cat, elecCode, elecShells, origin, source, mp, bp, en, ie, uses, crystal, cas, thermal, elecCond, density, radius] = d;
+            const pos = calcSpiralPos(period, group);
+            nodes.push({
+                num, sym, nameJa, nameEn, mass, block, period, group, state, cat, elecCode, elecShells,
+                origin, source, mp, bp, en, ie, uses, crystal, cas, thermal, elecCond, density, radius,
+                homeX: pos.x, homeY: pos.y, homeZ: pos.z,
+                expandedX: pos.x, expandedY: pos.y, expandedZ: pos.z,
+                x: pos.x, y: pos.y, z: pos.z,
+                isTrigger: false,
+                baseAngle: pos.angle, baseR: pos.baseR, baseY: pos.baseY
+            });
+        });
+
+        const posLn = calcSpiralPos(6, 3);
+        const triggerLn = {
+            num: 'Ln', sym: 'Ln', nameJa: 'ランタノイド群 (57-71)', nameEn: 'Lanthanides',
+            mass: '57-71', block: 'f', period: 6, group: 3, state: 'ー', cat: 'ランタノイド',
+            elecCode: '[Xe] 4f<sup>1-14</sup> 5d<sup>0-1</sup> 6s<sup>2</sup>', elecShells: '57〜71番元素',
+            origin: '天然/人工', source: '希土類鉱石市場', mp: 'ー', bp: 'ー', en: 'ー', ie: 'ー',
+            uses: '原子番号57から71までの15元素の総称であり、強力なネオジム磁石や液晶用蛍光体、光学ガラスなどに不可欠です。鉱石の精製によって工業的に得られます。ハイテク産業のビタミンとも称され現代の電子機器を支えます。化学的性質が非常に似ており分離が困難な特徴を持ちます。取り扱いの際は粉塵の吸入防止や火気管理に注意が必要です。',
+            crystal: 'ー', cas: 'ー', thermal: 'ー', elecCond: 'ー', density: 'ー', radius: 'ー',
+            isTrigger: true, series: 'lanthanide',
+            homeX: posLn.x, homeY: posLn.y, homeZ: posLn.z,
+            x: posLn.x, y: posLn.y, z: posLn.z,
+            baseAngle: posLn.angle, baseR: posLn.baseR, baseY: posLn.baseY
+        };
+
+        const posAc = calcSpiralPos(7, 3);
+        const triggerAc = {
+            num: 'Ac', sym: 'Ac', nameJa: 'アクチノイド群 (89-103)', nameEn: 'Actinides',
+            mass: '89-103', block: 'f', period: 7, group: 3, state: 'ー', cat: 'アクチノイド',
+            elecCode: '[Rn] 5f<sup>1-14</sup> 6d<sup>0-1</sup> 7s<sup>2</sup>', elecShells: '89〜103番元素',
+            origin: '人工多数', source: '国家管理・原子炉', mp: 'ー', bp: 'ー', en: 'ー', ie: 'ー',
+            uses: '原子番号89から103までの15元素の総称であり、すべてが強い放射性を持つ特徴があります。天然由来のほか原子炉や加速器で人工合成されます。原子力発電燃料や宇宙探査機の電源、中性子線源として利用されます。強い毒性と放射能を伴うため、厳格な国家管理と完全な放射線防護の下でのみ取り扱われます。',
+            crystal: 'ー', cas: 'ー', thermal: 'ー', elecCond: 'ー', density: 'ー', radius: 'ー',
+            isTrigger: true, series: 'actinide',
+            homeX: posAc.x, homeY: posAc.y, homeZ: posAc.z,
+            x: posAc.x, y: posAc.y, z: posAc.z,
+            baseAngle: posAc.angle, baseR: posAc.baseR, baseY: posAc.baseY
+        };
+
+        nodes.push(triggerLn, triggerAc);
+
+        nodes.forEach(node => {
+            if (node.block === 'f' && !node.isTrigger) {
+                const isLan = node.num <= 71;
+                const trig = isLan ? triggerLn : triggerAc;
+                node.homeX = trig.homeX; node.homeY = trig.homeY; node.homeZ = trig.homeZ;
+                const fIdx = isLan ? (node.num - 57) : (node.num - 89);
+                const step = fIdx / 14;
+                const currentArchAngle = trig.baseAngle + (step - 0.5) * Math.PI * 0.45;
+                const archRadiusOut = trig.baseR + 65 + Math.sin(step * Math.PI) * 45;
+                node.expandedX = Math.cos(currentArchAngle) * archRadiusOut;
+                node.expandedZ = Math.sin(currentArchAngle) * archRadiusOut;
+                node.expandedY = trig.baseY + (step - 0.5) * 60;
+            }
+        });
+
+        const fullSpiralPoints = [];
+        for (let p = 1; p <= 7; p++) {
+            const baseR = 110 + p * 55;
+            const SUBDIVISIONS = Math.max(12, Math.round(24 * (baseR / 440)));
+            for (let g = 1; g <= 18; g++) {
+                if (p === 6 && g > 3 && g < 4) continue;
+                if (p === 7 && g > 3 && g < 4) continue;
+
+                if (g === 18) {
+                    const pos = calcSpiralPos(p, g);
+                    fullSpiralPoints.push({ x: pos.x, y: pos.y, z: pos.z, period: p });
+                    
+                    if (p < 7) {
+                        const nextP = p + 1;
+                        const posNext = calcSpiralPos(nextP, 1);
+                        const jumpSub = Math.max(12, SUBDIVISIONS);
+                        for (let sub = 1; sub <= jumpSub; sub++) {
+                            const t = sub / jumpSub;
+                            fullSpiralPoints.push({
+                                x: pos.x + (posNext.x - pos.x) * t,
+                                y: pos.y + (posNext.y - pos.y) * t,
+                                z: pos.z + (posNext.z - pos.z) * t,
+                                period: p
+                            });
+                        }
+                    }
+                    break;
+                }
+
+                for (let sub = 0; sub < SUBDIVISIONS; sub++) {
+                    const pos = calcSpiralPos(p, g + sub / SUBDIVISIONS);
+                    fullSpiralPoints.push({ x: pos.x, y: pos.y, z: pos.z, period: p });
+                }
+            }
+        }
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let rotX = 0.35, rotY = 0.5;
+        let zoom = 0.7;
+        let autoRotate = true;
+        let isDragging = false;
+        let lastMouse = { x: 0, y: 0 };
+        let hoveredNode = null;
+        let activeCardNode = null;
+        let currentSelectedNode = nodes[0];
+        let isCardPinned = false;
+        let dpr = window.devicePixelRatio || 1;
+
+        let expandLanProgress = 0.0;
+        let expandAcProgress = 0.0;
+        let isLanLocked = false;
+        let isAcLocked = false;
+
+        function resize() {
+            dpr = window.devicePixelRatio || 1;
+            const w = window.innerWidth || document.documentElement.clientWidth || 800;
+            const h = window.innerHeight || document.documentElement.clientHeight || 600;
+            
+            canvas.width = w * dpr;
+            canvas.height = h * dpr;
+            canvas.style.width = w + 'px';
+            canvas.style.height = h + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function projectRaw(x, y, z) {
+            let x1 = x * Math.cos(rotY) + z * Math.sin(rotY);
+            let z1 = -x * Math.sin(rotY) + z * Math.cos(rotY);
+            let y2 = y * Math.cos(rotX) - z1 * Math.sin(rotX);
+            let z2 = y * Math.sin(rotX) + z1 * Math.cos(rotX);
+
+            const screenW = canvas.width / dpr;
+            const screenH = canvas.height / dpr;
+
+            const cameraZ = 1100 / zoom;
+            const fov = 750;
+            const scale = fov / (cameraZ + z2);
+
+            return { x: screenW / 2 + x1 * scale, y: screenH / 2 + y2 * scale, scale: scale, z2: z2 };
+        }
+
+        function project(p) { return projectRaw(p.x, p.y, p.z); }
+        function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+        function draw3DSphere(px, py, radius, colorConfig) {
+            ctx.save();
+            ctx.shadowBlur = 0;
+
+            const grad = ctx.createRadialGradient(
+                px - radius * 0.35, py - radius * 0.35, radius * 0.02,
+                px, py, radius
+            );
+            grad.addColorStop(0, '#ffffff');
+            grad.addColorStop(0.35, colorConfig.highlight);
+            grad.addColorStop(1, colorConfig.base);
+
+            ctx.beginPath();
+            ctx.arc(px, py, radius, 0, Math.PI * 2);
+            ctx.fillStyle = grad;
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function clipSegment3D(p1, p2) {
+            let cp1 = { x: p1.x, y: p1.y, z: p1.z };
+            let cp2 = { x: p2.x, y: p2.y, z: p2.z };
+            
+            for (let i = 0; i < nodes.length; i++) {
+                const node = nodes[i];
+                if (node.block === 'f' && !node.isTrigger) {
+                    const prog = node.num <= 71 ? expandLanProgress : expandAcProgress;
+                    if (prog < 0.02) continue;
+                }
+                const r = 38;
+                
+                let dx1 = cp1.x - node.x;
+                let dy1 = cp1.y - node.y;
+                let dz1 = cp1.z - node.z;
+                let d1Sq = dx1 * dx1 + dy1 * dy1 + dz1 * dz1;
+                if (d1Sq < r * r) {
+                    let d1 = Math.sqrt(d1Sq);
+                    if (d1 > 0.001) {
+                        cp1.x = node.x + (dx1 / d1) * r;
+                        cp1.y = node.y + (dy1 / d1) * r;
+                        cp1.z = node.z + (dz1 / d1) * r;
+                    }
+                }
+                
+                let dx2 = cp2.x - node.x;
+                let dy2 = cp2.y - node.y;
+                let dz2 = cp2.z - node.z;
+                let d2Sq = dx2 * dx2 + dy2 * dy2 + dz2 * dz2;
+                if (d2Sq < r * r) {
+                    let d2 = Math.sqrt(d2Sq);
+                    if (d2 > 0.001) {
+                        cp2.x = node.x + (dx2 / d2) * r;
+                        cp2.y = node.y + (dy2 / d2) * r;
+                        cp2.z = node.z + (dz2 / d2) * r;
+                    }
+                }
+            }
+            return { p1: cp1, p2: cp2 };
+        }
+
+        function draw(timestamp) {
+            const screenW = canvas.width / dpr;
+            const screenH = canvas.height / dpr;
+            ctx.clearRect(0, 0, screenW, screenH);
+
+            ctx.save();
+            const underGlow = ctx.createRadialGradient(
+                screenW / 2, screenH + 80, 40,
+                screenW / 2, screenH, screenH * 0.85
+            );
+            underGlow.addColorStop(0, 'rgba(0, 240, 255, 0.35)');
+            underGlow.addColorStop(0.35, 'rgba(168, 85, 247, 0.22)');
+            underGlow.addColorStop(0.7, 'rgba(255, 0, 127, 0.08)');
+            underGlow.addColorStop(1, 'transparent');
+            ctx.fillStyle = underGlow;
+            ctx.fillRect(0, 0, screenW, screenH);
+            ctx.restore();
+
+            if (autoRotate && !isDragging) rotY += 0.004;
+
+            let targetLn = isLanLocked ? 1.0 : 0.0;
+            let targetAc = isAcLocked ? 1.0 : 0.0;
+
+            const targetCheckNode = hoveredNode || activeCardNode;
+            if (targetCheckNode) {
+                if (targetCheckNode.num === 'Ln' || (typeof targetCheckNode.num === 'number' && targetCheckNode.num >= 57 && targetCheckNode.num <= 71)) targetLn = 1.0;
+                if (targetCheckNode.num === 'Ac' || (typeof targetCheckNode.num === 'number' && targetCheckNode.num >= 89 && targetCheckNode.num <= 103)) targetAc = 1.0;
+            }
+
+            expandLanProgress += (targetLn - expandLanProgress) * 0.12;
+            expandAcProgress += (targetAc - expandAcProgress) * 0.12;
+
+            nodes.forEach(node => {
+                if (node.block === 'f' && !node.isTrigger) {
+                    const prog = node.num <= 71 ? easeOutCubic(expandLanProgress) : easeOutCubic(expandAcProgress);
+                    node.x = node.homeX + (node.expandedX - node.homeX) * prog;
+                    node.y = node.homeY + (node.expandedY - node.homeY) * prog;
+                    node.z = node.homeZ + (node.expandedZ - node.homeZ) * prog;
+                }
+            });
+
+            const projectedMap = new Map();
+            nodes.forEach(node => {
+                const proj = project(node);
+                projectedMap.set(node.num, { ...node, px: proj.x, py: proj.y, scale: proj.scale, z2: proj.z2 });
+            });
+
+            const renderItems = [];
+
+            for (let i = 0; i < fullSpiralPoints.length - 1; i++) {
+                const p13d = fullSpiralPoints[i];
+                const p23d = fullSpiralPoints[i + 1];
+                
+                const midX = (p13d.x + p23d.x) / 2;
+                const midY = (p13d.y + p23d.y) / 2;
+                const midZ = (p13d.z + p23d.z) / 2;
+
+                let x1_ = midX * Math.cos(rotY) + midZ * Math.sin(rotY);
+                let z1_ = -midX * Math.sin(rotY) + midZ * Math.cos(rotY);
+                let segZ2 = midY * Math.sin(rotX) + z1_ * Math.cos(rotX);
+
+                let skip = false;
+                for (const node of nodes) {
+                    if (node.block === 'f' && !node.isTrigger) {
+                        const prog = node.num <= 71 ? expandLanProgress : expandAcProgress;
+                        if (prog < 0.02) continue;
+                    }
+                    
+                    const dx = midX - node.x;
+                    const dy = midY - node.y;
+                    const dz = midZ - node.z;
+                    const distSq = dx * dx + dy * dy + dz * dz;
+
+                    let nz1_ = -node.x * Math.sin(rotY) + node.z * Math.cos(rotY);
+                    let nodeZ2 = node.y * Math.sin(rotX) + nz1_ * Math.cos(rotX);
+
+                    if (distSq < 42 * 42 && segZ2 < nodeZ2 + 5) {
+                        skip = true;
+                        break;
+                    }
+                }
+
+                if (skip) continue;
+
+                const clipped = clipSegment3D(p13d, p23d);
+                if (Math.abs(clipped.p1.x - clipped.p2.x) < 0.001 && Math.abs(clipped.p1.y - clipped.p2.y) < 0.001 && Math.abs(clipped.p1.z - clipped.p2.z) < 0.001) {
+                    continue;
+                }
+
+                const proj1 = project(clipped.p1);
+                const proj2 = project(clipped.p2);
+                const avgZ2 = (proj1.z2 + proj2.z2) / 2;
+
+                renderItems.push({
+                    type: 'segment',
+                    z2: avgZ2,
+                    p1: { x: proj1.x, y: proj1.y },
+                    p2: { x: proj2.x, y: proj2.y },
+                    period: p13d.period
+                });
+            }
+
+            [ { start: 57, end: 71, prog: expandLanProgress }, { start: 89, end: 103, prog: expandAcProgress } ].forEach(series => {
+                if (series.prog > 0.05) {
+                    const archNodes = [];
+                    for (let i = series.start; i <= series.end; i++) {
+                        archNodes.push(nodes.find(n => n.num === i));
+                    }
+                    for (let i = 0; i < archNodes.length - 1; i++) {
+                        const n1 = archNodes[i];
+                        const n2 = archNodes[i + 1];
+                        const clipped = clipSegment3D(n1, n2);
+                        if (Math.abs(clipped.p1.x - clipped.p2.x) < 0.001 && Math.abs(clipped.p1.y - clipped.p2.y) < 0.001 && Math.abs(clipped.p1.z - clipped.p2.z) < 0.001) continue;
+                        const proj1 = project(clipped.p1);
+                        const proj2 = project(clipped.p2);
+                        renderItems.push({
+                            type: 'archSegment',
+                            z2: (proj1.z2 + proj2.z2) / 2,
+                            p1: { x: proj1.x, y: proj1.y },
+                            p2: { x: proj2.x, y: proj2.y },
+                            prog: series.prog
+                        });
+                    }
+                }
+            });
+
+            projectedMap.forEach(node => {
+                if (node.block === 'f' && !node.isTrigger) {
+                    const prog = node.num <= 71 ? expandLanProgress : expandAcProgress;
+                    if (prog < 0.02) return;
+                }
+                renderItems.push({
+                    type: 'node',
+                    z2: node.z2,
+                    node: node
+                });
+            });
+
+            renderItems.sort((a, b) => b.z2 - a.z2);
+
+            const pulseTime = timestamp * 0.004;
+
+            renderItems.forEach(item => {
+                if (item.type === 'segment') {
+                    const color1 = PERIOD_COLORS[item.period - 1];
+                    const segGrad = ctx.createLinearGradient(item.p1.x, item.p1.y, item.p2.x, item.p2.y);
+                    segGrad.addColorStop(0, color1);
+                    segGrad.addColorStop(1, color1);
+
+                    ctx.save();
+                    ctx.shadowBlur = 0;
+                    ctx.globalAlpha = 0.7;
+                    ctx.beginPath();
+                    ctx.strokeStyle = segGrad;
+                    ctx.lineWidth = 2.5 * zoom;
+                    ctx.moveTo(item.p1.x, item.p1.y);
+                    ctx.lineTo(item.p2.x, item.p2.y);
+                    ctx.stroke();
+                    ctx.restore();
+                } else if (item.type === 'archSegment') {
+                    ctx.save();
+                    ctx.shadowBlur = 0;
+                    ctx.globalAlpha = item.prog * 0.8;
+                    ctx.beginPath();
+                    ctx.strokeStyle = '#c084fc';
+                    ctx.lineWidth = Math.max(3.0 * zoom * item.prog, 1.2);
+                    ctx.moveTo(item.p1.x, item.p1.y);
+                    ctx.lineTo(item.p2.x, item.p2.y);
+                    ctx.stroke();
+                    ctx.restore();
+                } else if (item.type === 'node') {
+                    const node = item.node;
+                    const isHovered = (hoveredNode && hoveredNode.num === node.num) || (activeCardNode && activeCardNode.num === node.num);
+
+                    if (node.isTrigger) {
+                        const pulse = Math.sin(pulseTime) * 4 + 2;
+                        const radius = Math.max((36 + pulse) * node.scale, 16);
+                        const blockCfg = COLOR_MAP['f'];
+
+                        ctx.save();
+                        ctx.shadowBlur = 0;
+                        ctx.beginPath(); ctx.arc(node.px, node.py, radius + 6, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(192, 132, 252, 0.25)'; ctx.fill();
+
+                        draw3DSphere(node.px, node.py, radius, blockCfg);
+
+                        ctx.lineWidth = isHovered ? 4.0 : 2.5;
+                        ctx.strokeStyle = isHovered ? '#ffffff' : 'rgba(192, 132, 252, 0.8)';
+                        ctx.beginPath();
+                        ctx.arc(node.px, node.py, radius, 0, Math.PI * 2);
+                        ctx.stroke();
+                        ctx.restore();
+
+                        ctx.fillStyle = '#030712'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                        ctx.font = `900 ${Math.max(18 * node.scale, 11)}px monospace`;
+                        ctx.fillText(node.sym, node.px, node.py);
+                    } else {
+                        const prog = node.block === 'f' ? (node.num <= 71 ? expandLanProgress : expandAcProgress) : 1.0;
+                        const radius = Math.max(36 * node.scale, 15);
+                        const blockCfg = COLOR_MAP[node.block] || COLOR_MAP['s'];
+
+                        ctx.save();
+                        ctx.shadowBlur = 0;
+                        ctx.globalAlpha *= prog;
+
+                        draw3DSphere(node.px, node.py, radius, blockCfg);
+
+                        ctx.lineWidth = (isHovered ? 4.5 : 2.2) * zoom;
+                        ctx.strokeStyle = isHovered ? '#ffffff' : `rgba(255, 255, 255, 0.6)`;
+
+                        ctx.beginPath();
+                        ctx.arc(node.px, node.py, radius, 0, Math.PI * 2);
+                        ctx.stroke();
+
+                        if (isHovered) {
+                            ctx.lineWidth = 1.5 * zoom;
+                            ctx.strokeStyle = blockCfg.highlight;
+                            ctx.beginPath();
+                            ctx.arc(node.px, node.py, radius + 6, 0, Math.PI * 2);
+                            ctx.stroke();
+                        }
+
+                        ctx.restore();
+
+                        ctx.fillStyle = '#030712'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                        const fontSize = Math.max(20 * node.scale, 11);
+                        
+                        ctx.font = `900 ${fontSize}px monospace`;
+                        ctx.fillText(node.sym, node.px, node.py - (radius * 0.16));
+                        
+                        ctx.font = `800 ${Math.max(fontSize * 0.55, 8)}px monospace`;
+                        ctx.fillText(node.num, node.px, node.py + (radius * 0.48));
+                    }
+                }
+            });
+
+            requestAnimationFrame(draw);
+        }
+
+        const atomCanvas = document.getElementById('atomCanvas');
+        const atomCtx = atomCanvas.getContext('2d');
+        let atomAngle = 0;
+
+        function renderAtomModel() {
+            const container = atomCanvas.parentElement;
+            if (container) {
+                const w = container.clientWidth;
+                const h = container.clientHeight;
+                if (atomCanvas.width !== w || atomCanvas.height !== h) {
+                    atomCanvas.width = w;
+                    atomCanvas.height = h;
+                }
+            }
+
+            atomCtx.clearRect(0, 0, atomCanvas.width, atomCanvas.height);
+            if (!activeCardNode) {
+                requestAnimationFrame(renderAtomModel);
+                return;
+            }
+
+            const cX = atomCanvas.width / 2;
+            const cY = atomCanvas.height / 2;
+            const minDim = Math.min(cX, cY);
+            atomAngle += 0.005;
+
+            let shells = [1];
+            if (activeCardNode.elecShells) {
+                shells = activeCardNode.elecShells.replace(/殻配置:\s*/, '').split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+            }
+            if (shells.length === 0) shells = [2, 8, 18, 8];
+
+            const colorCfg = COLOR_MAP[activeCardNode.block] || COLOR_MAP['s'];
+            const coreRadius = Math.max(5, minDim * 0.1);
+            const coreGrad = atomCtx.createRadialGradient(cX - 2, cY - 2, 2, cX, cY, coreRadius);
+            coreGrad.addColorStop(0, '#ffffff');
+            coreGrad.addColorStop(0.5, colorCfg.highlight);
+            coreGrad.addColorStop(1, colorCfg.base);
+
+            atomCtx.beginPath();
+            atomCtx.arc(cX, cY, coreRadius, 0, Math.PI * 2);
+            atomCtx.fillStyle = coreGrad;
+            atomCtx.fill();
+
+            atomCtx.fillStyle = '#030712';
+            atomCtx.font = `900 ${Math.max(7, coreRadius * 0.85)}px monospace`;
+            atomCtx.textAlign = 'center';
+            atomCtx.textBaseline = 'middle';
+            atomCtx.fillText(activeCardNode.sym, cX, cY);
+
+            const baseRadius = coreRadius + 6;
+            const availableSpace = (minDim * 0.9) - baseRadius;
+            const radiusStep = shells.length > 0 ? Math.max(4, availableSpace / Math.max(shells.length, 1)) : 8;
+
+            shells.forEach((electronCount, shellIndex) => {
+                const radius = baseRadius + shellIndex * radiusStep;
+                if (radius >= minDim - 2) return;
+
+                atomCtx.beginPath();
+                atomCtx.arc(cX, cY, radius, 0, Math.PI * 2);
+                atomCtx.strokeStyle = 'rgba(0, 240, 255, 0.2)';
+                atomCtx.lineWidth = 1;
+                atomCtx.stroke();
+
+                for (let i = 0; i < electronCount; i++) {
+                    const speed = (shellIndex % 2 === 0 ? 1 : -1) * (1 + (shells.length - shellIndex) * 0.15);
+                    const angle = atomAngle * speed + (i * (Math.PI * 2 / electronCount));
+                    const ex = cX + Math.cos(angle) * radius;
+                    const ey = cY + Math.sin(angle) * radius;
+
+                    atomCtx.beginPath();
+                    atomCtx.arc(ex, ey, Math.max(1, 1.2 * (minDim / 90)), 0, Math.PI * 2);
+                    atomCtx.fillStyle = '#00f0ff';
+                    atomCtx.fill();
+                }
+            });
+
+            requestAnimationFrame(renderAtomModel);
+        }
+        requestAnimationFrame(renderAtomModel);
+
+        const orbitalCanvas = document.getElementById('orbitalCanvas');
+        const orbitalCtx = orbitalCanvas.getContext('2d');
+        let orbitalRotY = 0;
+        let subOrbitIndex = 0;
+        let lastSwitchTime = 0;
+
+        let orbitalParticles = [];
+        for (let i = 0; i < 1800; i++) {
+            orbitalParticles.push({
+                u: Math.random() * Math.PI * 2,
+                v: (Math.random() - 0.5) * Math.PI
+            });
+        }
+
+        function getRadiusForOrbital(block, subIndex, u, v) {
+            let r = 0;
+            if (block === 's') {
+                r = 55;
+            } else if (block === 'p') {
+                if (subIndex === 0) r = 68 * Math.abs(Math.cos(v) * Math.cos(u));      // px
+                else if (subIndex === 1) r = 68 * Math.abs(Math.cos(v) * Math.sin(u)); // py
+                else r = 68 * Math.abs(Math.sin(v));                                 // pz
+            } else if (block === 'd') {
+                if (subIndex === 0) r = 72 * Math.abs(Math.cos(v) * Math.cos(v) * Math.sin(2 * u)); // dxy
+                else if (subIndex === 1) r = 135 * Math.abs(Math.sin(v) * Math.cos(v) * Math.sin(u));     // dyz
+                else if (subIndex === 2) r = 135 * Math.abs(Math.sin(v) * Math.cos(v) * Math.cos(u));     // dzx
+                else if (subIndex === 3) r = 72 * Math.abs(Math.cos(v) * Math.cos(v) * Math.cos(2 * u)); // dx²-y²
+                else r = Math.max(32 * Math.abs(3 * Math.sin(v) * Math.sin(v) - 1), 10 * Math.abs(Math.cos(v)) * Math.exp(-Math.pow(v, 2) * 2)); // dz²
+            } else if (block === 'f') {
+                if (subIndex === 0) r = 102 * Math.abs(Math.sin(v) * Math.sin(3 * u) * Math.cos(v)); 
+                else if (subIndex === 1) r = 105 * Math.abs(Math.cos(v) * Math.sin(v) * Math.sin(2 * u)); 
+                else if (subIndex === 2) r = 105 * Math.abs(Math.sin(v) * Math.cos(2 * u) * Math.cos(v)); 
+                else if (subIndex === 3) r = Math.max(38 * Math.abs(5 * Math.pow(Math.sin(v), 3) - 3 * Math.sin(v)), 0); 
+                else if (subIndex === 4) r = 50 * Math.abs(Math.cos(v) * Math.cos(u) * (5 * Math.sin(v)*Math.sin(v) - 1)); 
+                else if (subIndex === 5) r = 50 * Math.abs(Math.cos(v) * Math.sin(u) * (5 * Math.sin(v)*Math.sin(v) - 1)); 
+                else r = 105 * Math.abs(Math.sin(v) * Math.cos(3 * u) * Math.cos(v)); 
+            }
+            return r;
+        }
+
+        function cloneParametricTo3D(r, u, v, rotY, maxCanvasDim) {
+            let scaleFactor = (maxCanvasDim / 75);
+            let x = r * Math.cos(v) * Math.cos(u) * scaleFactor;
+            let y = r * Math.sin(v) * scaleFactor;
+            let z = r * Math.cos(v) * Math.sin(u) * scaleFactor;
+
+            let tiltX = 0.65;
+            let y1 = y * Math.cos(tiltX) - z * Math.sin(tiltX);
+            let z1 = y * Math.sin(tiltX) + z * Math.cos(tiltX);
+
+            let cosR = Math.cos(rotY);
+            let sinR = Math.sin(rotY);
+            let rx = x * cosR + z1 * sinR;
+            let rz = -x * sinR + z1 * cosR;
+            let ry = y1;
+
+            let fov = 350;
+            let scale = fov / (fov - rz);
+
+            return {
+                x: rx * scale,
+                y: ry * scale,
+                z: rz,
+                scale: scale
+            };
+        }
+
+        function renderOrbitalPreview(timestamp) {
+            const box = orbitalCanvas.parentElement;
+            const displayW = box ? box.clientWidth : 200;
+            const displayH = box ? box.clientHeight : 200;
+            if (orbitalCanvas.width !== displayW || orbitalCanvas.height !== displayH) {
+                orbitalCanvas.width = displayW;
+                orbitalCanvas.height = displayH;
+            }
+
+            orbitalCtx.clearRect(0, 0, orbitalCanvas.width, orbitalCanvas.height);
+            if (!currentSelectedNode) {
+                requestAnimationFrame(renderOrbitalPreview);
+                return;
+            }
+
+            const cX = orbitalCanvas.width / 2;
+            const cY = orbitalCanvas.height / 2;
+            const minCanvasDim = Math.min(cX, cY);
+            orbitalRotY += 0.012;
+
+            if (!lastSwitchTime) lastSwitchTime = timestamp;
+            if (timestamp - lastSwitchTime > 5000) {
+                subOrbitIndex++;
+                lastSwitchTime = timestamp;
+            }
+
+            const block = currentSelectedNode.block;
+
+            let subData = ['s軌道'];
+            if (block === 'p') {
+                subData = ['p<sub>x</sub>軌道', 'p<sub>y</sub>軌道', 'p<sub>z</sub>軌道'];
+            } else if (block === 'd') {
+                subData = ['d<sub>xy</sub>軌道', 'd<sub>yz</sub>軌道', 'd<sub>zx</sub>軌道', 'd<sub>x²-y²</sub>軌道', 'd<sub>z²</sub>軌道'];
+            } else if (block === 'f') {
+                subData = ['f<sub>y(3x²-y²)</sub>軌道', 'f<sub>xyz</sub>軌道', 'f<sub>z(x²-y²)</sub>軌道', 'f<sub>z³</sub>軌道', 'f<sub>xz²</sub>軌道', 'f<sub>yz²</sub>軌道', 'f<sub>(x³-3xy²)</sub>軌道'];
+            }
+
+            const activeSub = subOrbitIndex % subData.length;
+            const currentSubHtml = subData[activeSub];
+
+            const subNameElem = document.getElementById('sub-name');
+            if (subNameElem) subNameElem.innerHTML = currentSubHtml;
+
+            orbitalCtx.save();
+            orbitalCtx.translate(cX, cY);
+
+            const glowGrad = orbitalCtx.createRadialGradient(0, 0, 2, 0, 0, minCanvasDim * 0.9);
+            glowGrad.addColorStop(0, COLOR_MAP[block]?.highlight || 'rgba(0,240,255,0.25)');
+            glowGrad.addColorStop(1, 'transparent');
+            orbitalCtx.fillStyle = glowGrad;
+            orbitalCtx.beginPath();
+            orbitalCtx.arc(0, 0, minCanvasDim * 0.9, 0, Math.PI * 2);
+            orbitalCtx.fill();
+
+            orbitalCtx.beginPath();
+            orbitalCtx.arc(0, 0, 3, 0, Math.PI * 2);
+            orbitalCtx.fillStyle = '#ffffff';
+            orbitalCtx.shadowColor = COLOR_MAP[block]?.base || '#00f0ff';
+            orbitalCtx.shadowBlur = 8;
+            orbitalCtx.fill();
+            orbitalCtx.shadowBlur = 0;
+
+            let projectedDots = [];
+
+            orbitalParticles.forEach((p) => {
+                let r = getRadiusForOrbital(block, activeSub, p.u, p.v);
+                let coords = cloneParametricTo3D(r, p.u, p.v, orbitalRotY, minCanvasDim);
+                projectedDots.push({
+                    x: coords.x,
+                    y: coords.y,
+                    z: coords.z,
+                    scale: coords.scale
+                });
+            });
+
+            projectedDots.sort((a, b) => a.z - b.z);
+
+            projectedDots.forEach(dot => {
+                let alpha = Math.max(0.2, Math.min(0.9, (dot.z + 80) / 140));
+                let dotSize = Math.max(0.6, 1.2 * dot.scale);
+
+                orbitalCtx.beginPath();
+                orbitalCtx.arc(dot.x, dot.y, dotSize, 0, Math.PI * 2);
+                orbitalCtx.fillStyle = COLOR_MAP[block]?.highlight || '#00d2ff';
+                orbitalCtx.globalAlpha = alpha;
+                orbitalCtx.fill();
+            });
+
+            orbitalCtx.restore();
+            requestAnimationFrame(renderOrbitalPreview);
+        }
+
+        requestAnimationFrame(renderOrbitalPreview);
+
+        const cardElem = document.getElementById('card');
+        const orbitalPanelElem = document.getElementById('orbitalPanel');
+        const rightBottomGroup = document.getElementById('rightBottomGroup');
+
+        const cardObserver = new ResizeObserver(entries => {
+            for (let entry of entries) {
+                const w = entry.contentRect.width;
+                const scale = w / 240;
+                cardElem.style.setProperty('--card-scale', Math.max(0.8, Math.min(scale * 1.15, 2.8)));
+            }
+        });
+        cardObserver.observe(cardElem);
+
+        const orbitalObserver = new ResizeObserver(entries => {
+            for (let entry of entries) {
+                const w = entry.contentRect.width;
+                const scale = w / 220;
+                orbitalPanelElem.style.setProperty('--scale', Math.max(0.65, Math.min(scale, 2.5)));
+            }
+        });
+        orbitalObserver.observe(orbitalPanelElem);
+
+        const cardResizeHandle = document.getElementById('cardResizeHandle');
+        let isResizingCard = false;
+        let cardStartX = 0, cardStartY = 0, cardStartW = 0, cardStartH = 0;
+
+        cardResizeHandle.addEventListener('mousedown', e => {
+            isResizingCard = true;
+            cardStartX = e.clientX;
+            cardStartY = e.clientY;
+            cardStartW = cardElem.offsetWidth;
+            cardStartH = cardElem.offsetHeight;
+            e.stopPropagation();
+            e.preventDefault();
+        });
+
+        const orbitalResizeHandle = document.getElementById('orbitalResizeHandle');
+        let isResizingOrbital = false;
+        let orbitalStartX = 0, orbitalStartY = 0, orbitalStartW = 0, orbitalStartH = 0;
+
+        orbitalResizeHandle.addEventListener('mousedown', e => {
+            isResizingOrbital = true;
+            orbitalStartX = e.clientX;
+            orbitalStartY = e.clientY;
+            orbitalStartW = orbitalPanelElem.offsetWidth;
+            orbitalStartH = orbitalPanelElem.offsetHeight;
+            e.stopPropagation();
+            e.preventDefault();
+        });
+
+        window.addEventListener('mousemove', e => {
+            if (isResizingCard) {
+                const dx = e.clientX - cardStartX;
+                const ratio = 350 / 260;
+                const newW = Math.max(180, cardStartW + dx);
+                const newH = newW * ratio;
+
+                cardElem.style.width = newW + 'px';
+                cardElem.style.height = newH + 'px';
+            }
+            if (isResizingOrbital) {
+                const dx = e.clientX - orbitalStartX;
+                const ratio = 220 / 240;
+                const newW = Math.max(150, orbitalStartW - dx);
+                const newH = newW * ratio;
+
+                orbitalPanelElem.style.width = newW + 'px';
+                orbitalPanelElem.style.height = newH + 'px';
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            isResizingCard = false;
+            isResizingOrbital = false;
+        });
+
+        function renderCardData(node) {
+            activeCardNode = node;
+            currentSelectedNode = node; 
+            subOrbitIndex = 0;
+
+            document.getElementById('c-num').innerText = `#${String(node.num).padStart(2, '0')}`;
+            document.getElementById('c-mass').innerText = `原子量: ${node.mass}`;
+            document.getElementById('c-sym').innerText = node.sym;
+            document.getElementById('c-name-ja').innerText = node.nameJa;
+            document.getElementById('c-name-en').innerText = node.nameEn;
+            
+            document.getElementById('c-period').innerText = `第${node.period}周期`;
+            document.getElementById('c-group').innerText = `${node.group}族`;
+            document.getElementById('c-crystal').innerText = node.crystal || 'ー';
+            document.getElementById('c-cas').innerText = node.cas || 'ー';
+            
+            document.getElementById('c-elec-code').innerHTML = node.elecCode;
+            document.getElementById('c-elec-shells').innerText = `殻: ${node.elecShells}`;
+
+            const noteElem = document.getElementById('c-elec-note');
+            let noteText = "";
+            const num = node.num;
+
+            if (num === 24) {
+                noteText = "※d軌道が半満杯になることでエネルギー的に安定するため、4sから1つ電子が移ります。";
+            } else if (num === 29) {
+                noteText = "※d軌道が完全に埋まることで安定するため、4sから電子が移ります。";
+            } else if (num === 57) {
+                noteText = "※電子配置の厳密な分類ではdブロックの元素です。";
+            } else if (num === 64) {
+                noteText = "※電子配置の中に5dを含みますが、化学的性質や分類上はfブロックとして扱われます。";
+            } else if (num === 71) {
+                noteText = "※電子配置の厳密な分類ではdブロックの元素です。";
+            } else if (num === 89) {
+                noteText = "※電子配置の厳密な分類ではdブロックの元素です。";
+            } else if (num === 90) {
+                noteText = "※電子配置の厳密な分類ではdブロックの元素です。";
+            } else if (num === 96) {
+                noteText = "※電子配置の中に6d軌道を含みますが、化学的性質や分類上はfブロック元素として扱われます。";
+            } else if (num === 103) {
+                noteText = "※電子配置の厳密な観点では、Lrは典型的なfブロック元素ではなく、最後の電子が7p軌道に入る特殊な元素です。";
+            }
+
+            if (noteText) {
+                noteElem.innerText = noteText;
+                noteElem.style.display = 'block';
+            } else {
+                noteElem.innerText = "";
+                noteElem.style.display = 'none';
+            }
+
+            document.getElementById('c-mp').innerText = (node.mp && node.mp !== 'ー') ? `${node.mp}°C` : 'ー';
+            document.getElementById('c-bp').innerText = (node.bp && node.bp !== 'ー') ? `${node.bp}°C` : 'ー';
+            document.getElementById('c-density').innerText = node.density || 'ー';
+            document.getElementById('c-radius').innerText = node.radius || 'ー';
+            document.getElementById('c-en').innerText = node.en || 'ー';
+            document.getElementById('c-thermal').innerText = node.thermal || 'ー';
+            document.getElementById('c-elec-cond').innerText = node.elecCond || 'ー';
+            document.getElementById('c-ie').innerText = node.ie || 'ー';
+
+            document.getElementById('c-uses').innerText = node.uses || '学術・産業用元素。';
+
+            document.getElementById('c-cat').innerText = node.cat;
+            document.getElementById('c-tag-origin').innerText = node.origin || '天然元素';
+            document.getElementById('c-state-tag').innerText = node.state;
+
+            cardElem.style.display = 'flex';
+            rightBottomGroup.style.display = 'flex';
+        }
+
+        function unpinCard(e) {
+            if (e) e.stopPropagation();
+            isCardPinned = false;
+            cardElem.classList.remove('pinned');
+            cardElem.style.display = 'none';
+            activeCardNode = null;
+        }
+
+        function closeOrbitalPanel(e) {
+            if (e) e.stopPropagation();
+            rightBottomGroup.style.display = 'none';
+        }
+
+        function updateHoverNode(mx, my) {
+            const projectedList = nodes.map(node => {
+                const proj = project(node);
+                return { ...node, px: proj.x, py: proj.y, scale: proj.scale, z2: proj.z2 };
+            });
+
+            projectedList.sort((a, b) => b.z2 - a.z2);
+
+            let newHoveredNode = null;
+            for (const node of projectedList) {
+                if (node.block === 'f' && !node.isTrigger) {
+                    const prog = node.num <= 71 ? expandLanProgress : expandAcProgress;
+                    if (prog < 0.3) continue;
+                }
+
+                const dist = Math.hypot(node.px - mx, node.py - my);
+                if (dist < 36 * node.scale) {
+                    newHoveredNode = node;
+                    break;
+                }
+            }
+
+            hoveredNode = newHoveredNode;
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(`btn-tab-${tabName}`).classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
+        canvas.addEventListener('click', () => {
+            if (hoveredNode) {
+                if (hoveredNode.isTrigger) {
+                    if (hoveredNode.series === 'lanthanide') isLanLocked = !isLanLocked;
+                    if (hoveredNode.series === 'actinide') isAcLocked = !isAcLocked;
+                } else {
+                    isCardPinned = true;
+                    cardElem.classList.add('pinned');
+                    renderCardData(hoveredNode);
+                }
+            }
+        });
+
+        canvas.addEventListener('mousedown', e => {
+            isDragging = true;
+            lastMouse = { x: e.clientX, y: e.clientY };
+        });
+
+        window.addEventListener('mouseup', () => isDragging = false);
+
+        canvas.addEventListener('mousemove', e => {
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+
+            if (isDragging) {
+                rotY -= (e.clientX - lastMouse.x) * 0.005;
+                rotX += (e.clientY - lastMouse.y) * 0.005;
+                lastMouse = { x: e.clientX, y: e.clientY };
+            } else {
+                updateHoverNode(mx, my);
+            }
+        });
+
+        let initialPinchDist = null;
+        canvas.addEventListener('touchstart', e => {
+            if (e.touches.length === 1) {
+                isDragging = true;
+                lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                const rect = canvas.getBoundingClientRect();
+                updateHoverNode(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
+
+                if (hoveredNode) {
+                    if (hoveredNode.isTrigger) {
+                        if (hoveredNode.series === 'lanthanide') isLanLocked = !isLanLocked;
+                        if (hoveredNode.series === 'actinide') isAcLocked = !isAcLocked;
+                    } else {
+                        isCardPinned = true;
+                        cardElem.classList.add('pinned');
+                        renderCardData(hoveredNode);
+                    }
+                }
+            } else if (e.touches.length === 2) {
+                isDragging = false;
+                initialPinchDist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+            }
+        }, { passive: true });
+
+        canvas.addEventListener('touchmove', e => {
+            if (e.touches.length === 1 && isDragging) {
+                rotY -= (e.touches[0].clientX - lastMouse.x) * 0.005;
+                rotX += (e.touches[0].clientY - lastMouse.y) * 0.005;
+                lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            } else if (e.touches.length === 2 && initialPinchDist) {
+                const dist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                const delta = (dist - initialPinchDist) * 0.005;
+                changeZoom(delta);
+                initialPinchDist = dist;
+            }
+        }, { passive: true });
+
+        canvas.addEventListener('touchend', () => {
+            isDragging = false;
+            initialPinchDist = null;
+        });
+
+        canvas.addEventListener('wheel', e => {
+            changeZoom(e.deltaY * -0.001);
+        }, { passive: true });
+
+        function changeZoom(delta) { zoom = Math.max(0.3, Math.min(zoom + delta, 2.5)); }
+        function toggleAutoRotate() { autoRotate = !autoRotate; }
+        function resetView() { rotX = 0.35; rotY = 0.5; zoom = 0.7; }
+
+        resize();
+        requestAnimationFrame(draw);
+    </script>
+</body>
+</html>
