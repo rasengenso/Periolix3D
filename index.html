@@ -109,12 +109,14 @@
             display: flex; flex-direction: column; justify-content: space-between;
             font-size: calc(1rem * var(--scale, 1));
             overflow: hidden; position: relative;
+            touch-action: none;
         }
         .resize-handle-tl {
-            position: absolute; top: 0; left: 0; width: 16px; height: 16px;
+            position: absolute; top: 0; left: 0; width: 24px; height: 24px;
             cursor: nwse-resize; z-index: 30;
             border-top: 3px solid #00f0ff; border-left: 3px solid #00f0ff;
             border-top-left-radius: 14px;
+            touch-action: none;
         }
 
         .orbital-preview-header {
@@ -155,12 +157,14 @@
             box-shadow: 0 0 30px rgba(255, 0, 127, 0.25);
             transition: border-color 0.2s, box-shadow 0.2s;
             font-size: calc(1rem * var(--card-scale, 1));
+            touch-action: none;
         }
         .resize-handle-tr {
-            position: absolute; top: 0; right: 0; width: 18px; height: 18px;
+            position: absolute; top: 0; right: 0; width: 24px; height: 24px;
             cursor: nesw-resize; z-index: 30;
             border-top: 3px solid #ff007f; border-right: 3px solid #ff007f;
             border-top-right-radius: 12px;
+            touch-action: none;
         }
 
         .card.pinned {
@@ -1094,33 +1098,51 @@
         let isResizingCard = false;
         let cardStartX = 0, cardStartY = 0, cardStartW = 0, cardStartH = 0;
 
-        cardResizeHandle.addEventListener('mousedown', e => {
+        function startCardResize(clientX, clientY, e) {
             isResizingCard = true;
-            cardStartX = e.clientX;
-            cardStartY = e.clientY;
+            cardStartX = clientX;
+            cardStartY = clientY;
             cardStartW = cardElem.offsetWidth;
             cardStartH = cardElem.offsetHeight;
-            e.stopPropagation();
-            e.preventDefault();
-        });
+            if (e) {
+                e.stopPropagation();
+                if (e.cancelable) e.preventDefault();
+            }
+        }
+
+        cardResizeHandle.addEventListener('mousedown', e => startCardResize(e.clientX, e.clientY, e));
+        cardResizeHandle.addEventListener('touchstart', e => {
+            if (e.touches.length === 1) {
+                startCardResize(e.touches[0].clientX, e.touches[0].clientY, e);
+            }
+        }, { passive: false });
 
         const orbitalResizeHandle = document.getElementById('orbitalResizeHandle');
         let isResizingOrbital = false;
         let orbitalStartX = 0, orbitalStartY = 0, orbitalStartW = 0, orbitalStartH = 0;
 
-        orbitalResizeHandle.addEventListener('mousedown', e => {
+        function startOrbitalResize(clientX, clientY, e) {
             isResizingOrbital = true;
-            orbitalStartX = e.clientX;
-            orbitalStartY = e.clientY;
+            orbitalStartX = clientX;
+            orbitalStartY = clientY;
             orbitalStartW = orbitalPanelElem.offsetWidth;
             orbitalStartH = orbitalPanelElem.offsetHeight;
-            e.stopPropagation();
-            e.preventDefault();
-        });
+            if (e) {
+                e.stopPropagation();
+                if (e.cancelable) e.preventDefault();
+            }
+        }
 
-        window.addEventListener('mousemove', e => {
+        orbitalResizeHandle.addEventListener('mousedown', e => startOrbitalResize(e.clientX, e.clientY, e));
+        orbitalResizeHandle.addEventListener('touchstart', e => {
+            if (e.touches.length === 1) {
+                startOrbitalResize(e.touches[0].clientX, e.touches[0].clientY, e);
+            }
+        }, { passive: false });
+
+        function handleResizeMove(clientX, clientY) {
             if (isResizingCard) {
-                const dx = e.clientX - cardStartX;
+                const dx = clientX - cardStartX;
                 const ratio = 350 / 260;
                 const newW = Math.max(180, cardStartW + dx);
                 const newH = newW * ratio;
@@ -1129,7 +1151,7 @@
                 cardElem.style.height = newH + 'px';
             }
             if (isResizingOrbital) {
-                const dx = e.clientX - orbitalStartX;
+                const dx = clientX - orbitalStartX;
                 const ratio = 220 / 240;
                 const newW = Math.max(150, orbitalStartW - dx);
                 const newH = newW * ratio;
@@ -1137,12 +1159,23 @@
                 orbitalPanelElem.style.width = newW + 'px';
                 orbitalPanelElem.style.height = newH + 'px';
             }
-        });
+        }
 
-        window.addEventListener('mouseup', () => {
+        window.addEventListener('mousemove', e => handleResizeMove(e.clientX, e.clientY));
+        window.addEventListener('touchmove', e => {
+            if ((isResizingCard || isResizingOrbital) && e.touches.length === 1) {
+                handleResizeMove(e.touches[0].clientX, e.touches[0].clientY);
+                if (e.cancelable) e.preventDefault();
+            }
+        }, { passive: false });
+
+        function stopResize() {
             isResizingCard = false;
             isResizingOrbital = false;
-        });
+        }
+
+        window.addEventListener('mouseup', stopResize);
+        window.addEventListener('touchend', stopResize);
 
         function renderCardData(node) {
             activeCardNode = node;
@@ -1273,6 +1306,7 @@
         });
 
         canvas.addEventListener('mousedown', e => {
+            if (isResizingCard || isResizingOrbital) return;
             isDragging = true;
             lastMouse = { x: e.clientX, y: e.clientY };
         });
@@ -1280,6 +1314,7 @@
         window.addEventListener('mouseup', () => isDragging = false);
 
         canvas.addEventListener('mousemove', e => {
+            if (isResizingCard || isResizingOrbital) return;
             const rect = canvas.getBoundingClientRect();
             const mx = e.clientX - rect.left;
             const my = e.clientY - rect.top;
@@ -1295,6 +1330,7 @@
 
         let initialPinchDist = null;
         canvas.addEventListener('touchstart', e => {
+            if (isResizingCard || isResizingOrbital) return;
             if (e.touches.length === 1) {
                 isDragging = true;
                 lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -1321,6 +1357,7 @@
         }, { passive: true });
 
         canvas.addEventListener('touchmove', e => {
+            if (isResizingCard || isResizingOrbital) return;
             if (e.touches.length === 1 && isDragging) {
                 rotY -= (e.touches[0].clientX - lastMouse.x) * 0.005;
                 rotX += (e.touches[0].clientY - lastMouse.y) * 0.005;
