@@ -78,6 +78,9 @@
         }
         .dot { width: clamp(7px, 0.9vw, 10px); height: clamp(7px, 0.9vw, 10px); border-radius: 50%; display: inline-block; margin-right: 5px; box-shadow: 0 0 5px currentColor; }
 
+        /* スマホ縦画面時に「ブロック」の文字を非表示にするためのクラス */
+        .legend-text { display: inline; }
+
         /* 画面右上の操作ボタン群 */
         .controls {
             position: absolute; top: clamp(8px, 1.5vh, 20px); right: clamp(8px, 1.5vw, 20px); z-index: 10;
@@ -204,7 +207,7 @@
         .card-sym { font-size: calc(1.9rem * var(--card-scale, 1)); font-weight: 900; color: #f8fafc; line-height: 1; font-family: monospace; text-shadow: 0 0 10px rgba(255,255,255,0.4); }
         .card-names { display: flex; flex-direction: column; }
         .card-name-ja { font-size: calc(1.05rem * var(--card-scale, 1)); font-weight: bold; color: #f1f5f9; }
-        .card-name-en { font-size: calc(0.72rem * var(--card-scale, 1)); color: #94a3b8; font-weight: 600; font-family: monospace; }
+        .card-name-en { font-size: clamp(0.6rem, 0.5rem + 0.15vw, 0.72rem); color: #94a3b8; font-weight: 600; font-family: monospace; }
 
         .card-atom-box {
             width: 100%; flex-grow: 1; min-height: calc(35px * var(--card-scale, 1)); border-radius: 6px; overflow: hidden;
@@ -241,9 +244,10 @@
         .tag-origin { background: rgba(29, 78, 216, 0.2); color: #60a5fa; border: 1px solid rgba(29, 78, 216, 0.4); }
         .tag-state { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
 
-        /* フッターの著作権・データ出所表示 */
+        /* フッターの著作権・データ出所表示（二行に分けて中央配置） */
         footer {
-            position: absolute; bottom: 4px; left: 0; width: 100%;
+            position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+            width: 100%; max-width: 600px; padding: 0 10px;
             z-index: 5; font-size: clamp(0.55rem, 0.5rem + 0.15vw, 0.68rem); color: #94a3b8;
             text-align: center; pointer-events: none;
             font-weight: 600;
@@ -272,6 +276,10 @@
                 width: 6px;
                 height: 6px;
                 margin-right: 3px;
+            }
+            /* スマホ縦画面のとき「ブロック」の文字を非表示にする */
+            .legend-text {
+                display: none;
             }
             .controls {
                 top: 8px;
@@ -309,10 +317,10 @@
 
     <!-- 画面中央一番上の凡例パネル -->
     <div class="top-legend">
-        <span><span class="dot" style="color:#ff0055; background:#ff0055;"></span>sブロック</span>
-        <span><span class="dot" style="color:#00d2ff; background:#00d2ff;"></span>pブロック</span>
-        <span><span class="dot" style="color:#ffb700; background:#ffb700;"></span>dブロック</span>
-        <span><span class="dot" style="color:#a855f7; background:#a855f7;"></span>fブロック</span>
+        <span><span class="dot" style="color:#ff0055; background:#ff0055;"></span>s<span class="legend-text">ブロック</span></span>
+        <span><span class="dot" style="color:#00d2ff; background:#00d2ff;"></span>p<span class="legend-text">ブロック</span></span>
+        <span><span class="dot" style="color:#ffb700; background:#ffb700;"></span>d<span class="legend-text">ブロック</span></span>
+        <span><span class="dot" style="color:#a855f7; background:#a855f7;"></span>f<span class="legend-text">ブロック</span></span>
     </div>
 
     <!-- 画面左下に固定の元素情報詳細カード（初期非表示） -->
@@ -1193,9 +1201,7 @@
 
             projectedDots.forEach(dot => {
                 let alpha = Math.max(0.2, Math.min(0.9, (dot.z + 80) / 140));
-                
-                // 粒の直径（サイズ）
-                let dotSize = Math.max(0.4, 0.8 * dot.scale);
+                let dotSize = Math.max(0.4, 0.6 * dot.scale);
 
                 orbitalCtx.beginPath();
                 orbitalCtx.arc(dot.x, dot.y, dotSize, 0, Math.PI * 2);
