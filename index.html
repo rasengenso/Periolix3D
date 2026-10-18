@@ -718,12 +718,6 @@
             let targetLn = isLanLocked ? 1.0 : 0.0;
             let targetAc = isAcLocked ? 1.0 : 0.0;
 
-            const targetCheckNode = hoveredNode || activeCardNode;
-            if (targetCheckNode) {
-                if (targetCheckNode.num === 'Ln' || (typeof targetCheckNode.num === 'number' && targetCheckNode.num >= 57 && targetCheckNode.num <= 71)) targetLn = 1.0;
-                if (targetCheckNode.num === 'Ac' || (typeof targetCheckNode.num === 'number' && targetCheckNode.num >= 89 && targetCheckNode.num <= 103)) targetAc = 1.0;
-            }
-
             expandLanProgress += (targetLn - expandLanProgress) * 0.12;
             expandAcProgress += (targetAc - expandAcProgress) * 0.12;
 
