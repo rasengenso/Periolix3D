@@ -17,6 +17,9 @@
 </head>
 
     <style>
+        /* ==========================================
+         * 1. CSS変数・基本スタイルの設定
+         * ========================================== */
         :root {
             --vw: 1vw;
             --vh: 1vh;
@@ -32,6 +35,7 @@
             color: #f8fafc;
         }
 
+        /* 3D描画用メインキャンバス */
         #canvas {
             position: absolute; top: 0; left: 0;
             width: 100vw; height: 100vh;
@@ -40,7 +44,7 @@
         }
         #canvas:active { cursor: grabbing; }
 
-        /* 左上のロゴ（説明文を少し大きく） */
+        /* 左上のロゴ・説明文パネル */
         .ui-panel {
             position: absolute; top: clamp(8px, 1.5vh, 20px); left: clamp(8px, 1.5vw, 20px); z-index: 10;
             background: transparent; border: none; padding: 0; box-shadow: none; backdrop-filter: none;
@@ -61,7 +65,7 @@
             text-shadow: 0 0 5px rgba(0, 240, 255, 0.2);
         }
 
-        /* 画面中央一番上の凡例パネル（サイズ・表記のレスポンシブ調整） */
+        /* 画面中央上部の凡例パネル（s, p, d, fブロック） */
         .top-legend {
             position: absolute; top: clamp(8px, 1.5vh, 20px); left: 50%; transform: translateX(-50%); z-index: 10;
             display: flex; gap: clamp(8px, 1.5vw, 18px); background: rgba(15, 23, 42, 0.9);
@@ -74,7 +78,7 @@
         }
         .dot { width: clamp(7px, 0.9vw, 10px); height: clamp(7px, 0.9vw, 10px); border-radius: 50%; display: inline-block; margin-right: 5px; box-shadow: 0 0 5px currentColor; }
 
-        /* 操作ボタンのレスポンシブ化 */
+        /* 画面右上の操作ボタン群 */
         .controls {
             position: absolute; top: clamp(8px, 1.5vh, 20px); right: clamp(8px, 1.5vw, 20px); z-index: 10;
             display: flex; flex-direction: column; gap: clamp(5px, 0.9vh, 10px);
@@ -91,14 +95,16 @@
         .btn:hover { background: rgba(168, 85, 247, 0.2); color: #ffffff; border-color: #a855f7; box-shadow: 0 0 15px rgba(168, 85, 247, 0.4); }
         .btn-zoom { flex: 1; font-size: clamp(0.8rem, 0.68rem + 0.45vw, 1.05rem); padding: clamp(4px, 0.6vh, 8px); }
 
-        /* 右下グループ（軌道ビューアパネル） */
+        /* ==========================================
+         * 2. 右下・左下のモーダルパネル共通スタイル
+         * ========================================== */
         .right-bottom-group {
             position: absolute; bottom: clamp(8px, 1.5vh, 20px); right: clamp(8px, 1.5vw, 20px); z-index: 10;
             display: none; flex-direction: column; gap: 0; pointer-events: none;
         }
         .right-bottom-group > * { pointer-events: auto; }
 
-        /* 軌道ビューアパネル（左側に上下リサイズハンドル） */
+        /* 3D軌道ビューアパネル */
         .orbital-preview-panel {
             background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(14px);
             border: 1px solid rgba(0, 240, 255, 0.5); 
@@ -133,7 +139,6 @@
             font-size: calc(0.78rem * var(--scale, 1)); font-weight: 800; color: #00f0ff;
             font-family: monospace; letter-spacing: 0.5px;
         }
-        /* ×ボタン（右上の角から上下左右の距離が同じになるよう調整）[cite: 1] */
         .unpin-btn {
             background: transparent; border: none;
             font-size: calc(1.4rem * var(--scale, 1)); cursor: pointer; transition: transform 0.2s;
@@ -156,7 +161,7 @@
             display: flex; justify-content: center; align-items: center;
         }
 
-        /* 元素情報詳細カード */
+        /* 元素情報詳細カードパネル */
         .card {
             position: absolute; bottom: clamp(8px, 1.5vh, 20px); left: clamp(8px, 1.5vw, 20px); z-index: 20;
             background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px);
@@ -236,6 +241,7 @@
         .tag-origin { background: rgba(29, 78, 216, 0.2); color: #60a5fa; border: 1px solid rgba(29, 78, 216, 0.4); }
         .tag-state { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
 
+        /* フッターの著作権・データ出所表示 */
         footer {
             position: absolute; bottom: 4px; left: 0; width: 100%;
             z-index: 5; font-size: clamp(0.55rem, 0.5rem + 0.15vw, 0.68rem); color: #94a3b8;
@@ -245,12 +251,16 @@
             text-shadow: 0 0 6px rgba(0, 240, 255, 0.3);
         }
 
+        /* ==========================================
+         * 3. レスポンシブ対応（スマホ・縦画面向け）
+         * ========================================== */
         @media (max-width: 768px), (orientation: portrait) {
             .ui-panel {
-                max-width: 140px;
+                max-width: 185px; 
             }
             .ui-subtext {
-                display: none;
+                display: block; 
+                font-size: 0.62rem;
             }
             .top-legend {
                 font-size: 0.65rem;
@@ -332,12 +342,14 @@
         </div>
 
         <div>
+            <!-- カード内タブ切り替えボタン -->
             <div class="card-tabs">
                 <div class="tab-btn active" id="btn-tab-basic" onclick="switchTab('basic')">基本情報</div>
                 <div class="tab-btn" id="btn-tab-hazard" onclick="switchTab('hazard')">物性データ</div>
                 <div class="tab-btn" id="btn-tab-use" onclick="switchTab('use')">特徴・用途</div>
             </div>
 
+            <!-- タブ1: 基本情報コンテンツ -->
             <div class="tab-content active" id="tab-basic">
                 <div class="info-grid">
                     <div><span class="info-label">周期: </span><span class="info-val" id="c-period">第1周期</span></div>
@@ -353,6 +365,7 @@
                 </div>
             </div>
 
+            <!-- タブ2: 物性データコンテンツ -->
             <div class="tab-content" id="tab-hazard">
                 <div class="info-grid">
                     <div><span class="info-label">融点: </span><span class="info-val" id="c-mp">-259.1 ℃</span></div>
@@ -366,6 +379,7 @@
                 </div>
             </div>
 
+            <!-- タブ3: 特徴・用途コンテンツ -->
             <div class="tab-content" id="tab-use">
                 <div style="background:rgba(2,6,23,0.8); padding:6px; border-radius:5px; border:1px solid #1e293b;">
                     <div id="c-uses" style="color:#cbd5e1; line-height:1.35; font-size:calc(0.72rem * var(--card-scale, 1));"></div>
@@ -418,11 +432,15 @@
     <script src="data.js"></script>
 
     <script>
+        /* ==========================================
+         * 4. アプリケーション初期データと定数の定義
+         * ========================================== */
         const RAW_DATA = [];
         ORIGINAL_RAW.forEach(orig => {
             RAW_DATA.push([...orig]);
         });
 
+        // ブロックごとのカラーマップ（s, p, d, f）
         const COLOR_MAP = {
             s: { base: '#ff0055', highlight: '#ff7597', dark: '#880022' },
             p: { base: '#00d2ff', highlight: '#70e7ff', dark: '#005b8a' },
@@ -430,12 +448,14 @@
             f: { base: '#a855f7', highlight: '#d8b4fe', dark: '#581c87' }
         };
 
+        // 周期ごとのカラー定義
         const PERIOD_COLORS = [
             '#a855f7', '#00d2ff', '#34d399', '#a3e635', '#ffb700', '#ff7597', '#ff0055'
         ];
 
         const nodes = [];
 
+        // らせん状の座標を計算する関数
         function calcSpiralPos(period, groupVal) {
             const baseR = 110 + period * 55;
             const groupAngle = ((groupVal - 1) / 18) * Math.PI * 2;
@@ -446,6 +466,7 @@
             return { x: Math.cos(angle) * baseR, y: baseY, z: Math.sin(angle) * baseR, angle, baseR, baseY };
         }
 
+        // 元素データをノード配列に変換・初期化
         RAW_DATA.forEach(d => {
             const [num, sym, nameJa, nameEn, mass, block, period, group, state, cat, elecCode, elecShells, origin, source, mp, bp, en, ie, uses, crystal, cas, thermal, elecCond, density, radius] = d;
             const pos = calcSpiralPos(period, group);
@@ -460,6 +481,7 @@
             });
         });
 
+        // ランタノイド群のトリガーノード定義
         const posLn = calcSpiralPos(6, 3);
         const triggerLn = {
             num: 'Ln', sym: 'Ln', nameJa: 'ランタノイド群 (57-71)', nameEn: 'Lanthanides',
@@ -474,6 +496,7 @@
             baseAngle: posLn.angle, baseR: posLn.baseR, baseY: posLn.baseY
         };
 
+        // アクチノイド群のトリガーノード定義
         const posAc = calcSpiralPos(7, 3);
         const triggerAc = {
             num: 'Ac', sym: 'Ac', nameJa: 'アクチノイド群 (89-103)', nameEn: 'Actinides',
@@ -490,6 +513,7 @@
 
         nodes.push(triggerLn, triggerAc);
 
+        // fブロック元素の展開時の位置を計算
         nodes.forEach(node => {
             if (node.block === 'f' && !node.isTrigger) {
                 const isLan = node.num <= 71;
@@ -505,6 +529,7 @@
             }
         });
 
+        // らせん軌跡を描くための補間ポイントを生成
         const fullSpiralPoints = [];
         for (let p = 1; p <= 7; p++) {
             const baseR = 110 + p * 55;
@@ -541,6 +566,9 @@
             }
         }
 
+        /* ==========================================
+         * 5. 3D描画・プロジェクション関連の処理
+         * ========================================== */
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
 
@@ -560,6 +588,7 @@
         let isLanLocked = false;
         let isAcLocked = false;
 
+        // キャンバスのサイズ調整
         function resize() {
             dpr = window.devicePixelRatio || 1;
             const w = window.innerWidth || document.documentElement.clientWidth || 800;
@@ -574,6 +603,7 @@
         window.addEventListener('resize', resize);
         resize();
 
+        // 3D座標を2Dスクリーン座標に変換
         function projectRaw(x, y, z) {
             let x1 = x * Math.cos(rotY) + z * Math.sin(rotY);
             let z1 = -x * Math.sin(rotY) + z * Math.cos(rotY);
@@ -593,6 +623,7 @@
         function project(p) { return projectRaw(p.x, p.y, p.z); }
         function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
 
+        // 3D球体の描画
         function draw3DSphere(px, py, radius, colorConfig) {
             ctx.save();
             ctx.shadowBlur = 0;
@@ -612,6 +643,7 @@
             ctx.restore();
         }
 
+        // 描画物の重なり（クリッピング）を計算
         function clipSegment3D(p1, p2) {
             let cp1 = { x: p1.x, y: p1.y, z: p1.z };
             let cp2 = { x: p2.x, y: p2.y, z: p2.z };
@@ -653,19 +685,21 @@
             return { p1: cp1, p2: cp2 };
         }
 
+        // メインの3Dシーン描画ループ
         function draw(timestamp) {
             const screenW = canvas.width / dpr;
             const screenH = canvas.height / dpr;
             ctx.clearRect(0, 0, screenW, screenH);
 
             ctx.save();
+            // 周期表の下からの控えめなグロー効果
             const underGlow = ctx.createRadialGradient(
                 screenW / 2, screenH + 80, 40,
                 screenW / 2, screenH, screenH * 0.85
             );
-            underGlow.addColorStop(0, 'rgba(0, 240, 255, 0.35)');
-            underGlow.addColorStop(0.35, 'rgba(168, 85, 247, 0.22)');
-            underGlow.addColorStop(0.7, 'rgba(255, 0, 127, 0.08)');
+            underGlow.addColorStop(0, 'rgba(0, 240, 255, 0.18)');
+            underGlow.addColorStop(0.35, 'rgba(168, 85, 247, 0.11)');
+            underGlow.addColorStop(0.7, 'rgba(255, 0, 127, 0.04)');
             underGlow.addColorStop(1, 'transparent');
             ctx.fillStyle = underGlow;
             ctx.fillRect(0, 0, screenW, screenH);
@@ -702,6 +736,7 @@
 
             const renderItems = [];
 
+            // らせん軌道のセグメントを収集・処理
             for (let i = 0; i < fullSpiralPoints.length - 1; i++) {
                 const p13d = fullSpiralPoints[i];
                 const p23d = fullSpiralPoints[i + 1];
@@ -755,6 +790,7 @@
                 });
             }
 
+            // アーチ部分（fブロック展開用）のセグメント収集
             [ { start: 57, end: 71, prog: expandLanProgress }, { start: 89, end: 103, prog: expandAcProgress } ].forEach(series => {
                 if (series.prog > 0.05) {
                     const archNodes = [];
@@ -791,6 +827,7 @@
                 });
             });
 
+            // 奥行き（z2）順にソートして描画
             renderItems.sort((a, b) => b.z2 - a.z2);
 
             const pulseTime = timestamp * 0.004;
@@ -892,8 +929,10 @@
             requestAnimationFrame(draw);
         }
 
+        /* ==========================================
+         * 6. 元素カード内・電子模型アニメーション（高解像度対応）
+         * ========================================== */
         const atomCanvas = document.getElementById('atomCanvas');
-        const atomCtx = atomCanvas.getContext('2d');
         let atomAngle = 0;
 
         function renderAtomModel() {
@@ -901,20 +940,31 @@
             if (container) {
                 const w = container.clientWidth;
                 const h = container.clientHeight;
-                if (atomCanvas.width !== w || atomCanvas.height !== h) {
-                    atomCanvas.width = w;
-                    atomCanvas.height = h;
+                const currentDpr = window.devicePixelRatio || 1;
+                
+                if (atomCanvas.width !== w * currentDpr || atomCanvas.height !== h * currentDpr) {
+                    atomCanvas.width = w * currentDpr;
+                    atomCanvas.height = h * currentDpr;
+                    atomCanvas.style.width = w + 'px';
+                    atomCanvas.style.height = h + 'px';
                 }
             }
 
-            atomCtx.clearRect(0, 0, atomCanvas.width, atomCanvas.height);
+            const atomCtx = atomCanvas.getContext('2d');
+            const currentDpr = window.devicePixelRatio || 1;
+            atomCtx.setTransform(currentDpr, 0, 0, currentDpr, 0, 0);
+
+            const displayW = atomCanvas.width / currentDpr;
+            const displayH = atomCanvas.height / currentDpr;
+
+            atomCtx.clearRect(0, 0, displayW, displayH);
             if (!activeCardNode) {
                 requestAnimationFrame(renderAtomModel);
                 return;
             }
 
-            const cX = atomCanvas.width / 2;
-            const cY = atomCanvas.height / 2;
+            const cX = displayW / 2;
+            const cY = displayH / 2;
             const minDim = Math.min(cX, cY);
             atomAngle += 0.005;
 
@@ -973,8 +1023,10 @@
         }
         requestAnimationFrame(renderAtomModel);
 
+        /* ==========================================
+         * 7. 3D軌道ビューア（高解像度対応）
+         * ========================================== */
         const orbitalCanvas = document.getElementById('orbitalCanvas');
-        const orbitalCtx = orbitalCanvas.getContext('2d');
         let orbitalRotY = 0;
         let subOrbitIndex = 0;
         let lastSwitchTime = 0;
@@ -987,6 +1039,7 @@
             });
         }
 
+        // 各軌道の数式に基づく半径計算
         function getRadiusForOrbital(block, subIndex, u, v) {
             let r = 0;
             if (block === 's') {
@@ -1040,23 +1093,37 @@
             };
         }
 
+        // 軌道ビューアの描画ループ
         function renderOrbitalPreview(timestamp) {
             const box = orbitalCanvas.parentElement;
-            const displayW = box ? box.clientWidth : 200;
-            const displayH = box ? box.clientHeight : 200;
-            if (orbitalCanvas.width !== displayW || orbitalCanvas.height !== displayH) {
-                orbitalCanvas.width = displayW;
-                orbitalCanvas.height = displayH;
+            if (box) {
+                const displayW = box.clientWidth;
+                const displayH = box.clientHeight;
+                const currentDpr = window.devicePixelRatio || 1;
+                
+                if (orbitalCanvas.width !== displayW * currentDpr || orbitalCanvas.height !== displayH * currentDpr) {
+                    orbitalCanvas.width = displayW * currentDpr;
+                    orbitalCanvas.height = displayH * currentDpr;
+                    orbitalCanvas.style.width = displayW + 'px';
+                    orbitalCanvas.style.height = displayH + 'px';
+                }
             }
 
-            orbitalCtx.clearRect(0, 0, orbitalCanvas.width, orbitalCanvas.height);
+            const orbitalCtx = orbitalCanvas.getContext('2d');
+            const currentDpr = window.devicePixelRatio || 1;
+            orbitalCtx.setTransform(currentDpr, 0, 0, currentDpr, 0, 0);
+
+            const displayW = orbitalCanvas.width / currentDpr;
+            const displayH = orbitalCanvas.height / currentDpr;
+
+            orbitalCtx.clearRect(0, 0, displayW, displayH);
             if (!currentSelectedNode) {
                 requestAnimationFrame(renderOrbitalPreview);
                 return;
             }
 
-            const cX = orbitalCanvas.width / 2;
-            const cY = orbitalCanvas.height / 2;
+            const cX = displayW / 2;
+            const cY = displayH / 2;
             const minCanvasDim = Math.min(cX, cY);
             orbitalRotY += 0.012;
 
@@ -1067,6 +1134,7 @@
             }
 
             const block = currentSelectedNode.block;
+            const isS = (block === 's');
 
             let subData = ['s軌道'];
             if (block === 'p') {
@@ -1090,17 +1158,21 @@
             glowGrad.addColorStop(0, COLOR_MAP[block]?.highlight || 'rgba(0,240,255,0.25)');
             glowGrad.addColorStop(1, 'transparent');
             orbitalCtx.fillStyle = glowGrad;
+            orbitalCtx.globalAlpha = isS ? 1.0 : 0.25;
             orbitalCtx.beginPath();
             orbitalCtx.arc(0, 0, minCanvasDim * 0.9, 0, Math.PI * 2);
             orbitalCtx.fill();
+            orbitalCtx.globalAlpha = 1.0;
 
-            orbitalCtx.beginPath();
-            orbitalCtx.arc(0, 0, Math.max(1.0, minCanvasDim * 0.02), 0, Math.PI * 2);
-            orbitalCtx.fillStyle = '#ffffff';
-            orbitalCtx.shadowColor = COLOR_MAP[block]?.base || '#00f0ff';
-            orbitalCtx.shadowBlur = 8;
-            orbitalCtx.fill();
-            orbitalCtx.shadowBlur = 0;
+            if (isS) {
+                orbitalCtx.beginPath();
+                orbitalCtx.arc(0, 0, Math.max(1.0, minCanvasDim * 0.02), 0, Math.PI * 2);
+                orbitalCtx.fillStyle = '#ffffff';
+                orbitalCtx.shadowColor = COLOR_MAP[block]?.base || '#00f0ff';
+                orbitalCtx.shadowBlur = 8;
+                orbitalCtx.fill();
+                orbitalCtx.shadowBlur = 0;
+            }
 
             let projectedDots = [];
 
@@ -1134,6 +1206,9 @@
 
         requestAnimationFrame(renderOrbitalPreview);
 
+        /* ==========================================
+         * 8. パネルのリサイズ・UI操作・イベントリスナー
+         * ========================================== */
         const cardElem = document.getElementById('card');
         const orbitalPanelElem = document.getElementById('orbitalPanel');
         const rightBottomGroup = document.getElementById('rightBottomGroup');
@@ -1250,6 +1325,7 @@
         window.addEventListener('mouseup', stopResize);
         window.addEventListener('touchend', stopResize);
 
+        // 元素カードにデータを流し込んで表示する関数
         function renderCardData(node) {
             activeCardNode = node;
             currentSelectedNode = node; 
@@ -1301,7 +1377,6 @@
                 noteElem.style.display = 'none';
             }
 
-            // 融点と沸点の値と単位の間に半角スペースを適用
             document.getElementById('c-mp').innerText = (node.mp && node.mp !== 'ー') ? `${node.mp} ℃` : 'ー';
             document.getElementById('c-bp').innerText = (node.bp && node.bp !== 'ー') ? `${node.bp} ℃` : 'ー';
             
@@ -1335,6 +1410,7 @@
             rightBottomGroup.style.display = 'none';
         }
 
+        // マウス位置にある元素ノードのホバー判定
         function updateHoverNode(mx, my) {
             const projectedList = nodes.map(node => {
                 const proj = project(node);
@@ -1360,6 +1436,7 @@
             hoveredNode = newHoveredNode;
         }
 
+        // カード内タブ切り替え機能
         function switchTab(tabName) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -1367,6 +1444,7 @@
             document.getElementById(`tab-${tabName}`).classList.add('active');
         }
 
+        // マウス・タッチ操作イベントの設定
         canvas.addEventListener('click', () => {
             if (hoveredNode) {
                 if (hoveredNode.isTrigger) {
@@ -1457,10 +1535,12 @@
             changeZoom(e.deltaY * -0.001);
         }, { passive: true });
 
+        // コントロールボタン用関数
         function changeZoom(delta) { zoom = Math.max(0.3, Math.min(zoom + delta, 2.5)); }
         function toggleAutoRotate() { autoRotate = !autoRotate; }
         function resetView() { rotX = 0.35; rotY = 0.5; zoom = 0.7; }
 
+        // アプリケーション起動
         resize();
         requestAnimationFrame(draw);
     </script>
