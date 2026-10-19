@@ -14,7 +14,6 @@
 
     <!-- note等で大きな画像カードにする設定 -->
     <meta name="twitter:card" content="summary_large_image">
-</head>
 
     <style>
         /* ==========================================
@@ -1156,24 +1155,29 @@
             orbitalCtx.save();
             orbitalCtx.translate(cX, cY);
 
-            // 背景グロー
-            const glowGrad = orbitalCtx.createRadialGradient(0, 0, 2, 0, 0, minCanvasDim * 0.9);
-            glowGrad.addColorStop(0, COLOR_MAP[block]?.highlight || 'rgba(0,240,255,0.25)');
+            // 背景グロー（高DPR端末でも主張しすぎない柔らかいグラデーションに調整）
+            const glowRadius = minCanvasDim * 0.6;
+            const glowGrad = orbitalCtx.createRadialGradient(0, 0, 1, 0, 0, glowRadius);
+            const baseColor = COLOR_MAP[block]?.highlight || '#00d2ff';
+            glowGrad.addColorStop(0, baseColor);
+            glowGrad.addColorStop(0.4, 'rgba(0, 240, 255, 0.15)');
             glowGrad.addColorStop(1, 'transparent');
+
             orbitalCtx.fillStyle = glowGrad;
-            orbitalCtx.globalAlpha = isS ? 1.0 : 0.4;
+            orbitalCtx.globalAlpha = isS ? 0.35 : 0.2;
             orbitalCtx.beginPath();
-            orbitalCtx.arc(0, 0, minCanvasDim * 0.9, 0, Math.PI * 2);
+            orbitalCtx.arc(0, 0, glowRadius, 0, Math.PI * 2);
             orbitalCtx.fill();
             orbitalCtx.globalAlpha = 1.0;
 
-            // 中心の中央点
+            // 中心の中央点（シャドウブラーがDPR拡大で濃く重なるのを防止）
+            const coreRadius = Math.max(1, minCanvasDim * (isS ? 0.015 : 0.008));
             orbitalCtx.beginPath();
-            orbitalCtx.arc(0, 0, Math.max(0.8, minCanvasDim * (isS ? 0.02 : 0.01)), 0, Math.PI * 2);
+            orbitalCtx.arc(0, 0, coreRadius, 0, Math.PI * 2);
             orbitalCtx.fillStyle = '#ffffff';
             orbitalCtx.shadowColor = COLOR_MAP[block]?.base || '#00f0ff';
-            orbitalCtx.shadowBlur = isS ? 8 : 4;
-            orbitalCtx.globalAlpha = isS ? 1.0 : 0.5;
+            orbitalCtx.shadowBlur = isS ? 4 : 2;
+            orbitalCtx.globalAlpha = isS ? 0.7 : 0.4;
             orbitalCtx.fill();
             orbitalCtx.shadowBlur = 0;
             orbitalCtx.globalAlpha = 1.0;
