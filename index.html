@@ -1345,9 +1345,10 @@
             const maxAllowedH = window.innerHeight * 0.85;
 
             if (isResizingCard) {
+                // 右上/右下ハンドル：右へ引っ張ると拡大、左へ引っ張ると縮小
                 const dx = clientX - cardStartX;
                 const ratio = 390 / 260; // 縦横比固定
-                let newW = Math.max(180, cardStartW + dx);
+                let newW = Math.max(160, cardStartW + dx);
                 let newH = newW * ratio;
 
                 if (newW > maxAllowedW) { newW = maxAllowedW; newH = newW * ratio; }
@@ -1357,9 +1358,10 @@
                 cardElem.style.height = newH + 'px';
             }
             if (isResizingOrbital) {
+                // 左上/左下ハンドル：左へ引っ張ると拡大、右へ引っ張ると縮小
                 const dx = clientX - orbitalStartX;
                 const ratio = 220 / 240; // 縦横比固定
-                let newW = Math.max(150, orbitalStartW - dx);
+                let newW = Math.max(140, orbitalStartW - dx);
                 let newH = newW * ratio;
 
                 if (newW > maxAllowedW) { newW = maxAllowedW; newH = newW * ratio; }
@@ -1372,7 +1374,7 @@
 
         window.addEventListener('mousemove', e => handleResizeMove(e.clientX, e.clientY));
         window.addEventListener('touchmove', e => {
-            if ((isResizingCard || isResizingOrbital) && e.touches.length === 1) {
+            if ((isResizingCard || isResizingOrbital) && e.touches.length > 0) {
                 handleResizeMove(e.touches[0].clientX, e.touches[0].clientY);
                 if (e.cancelable) e.preventDefault();
             }
