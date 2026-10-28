@@ -87,7 +87,7 @@
         }
         .dot { width: clamp(7px, 0.9vw, 10px); height: clamp(7px, 0.9vw, 10px); border-radius: 50%; display: inline-block; margin-right: 5px; box-shadow: 0 0 5px currentColor; }
 
-        /* スマホ縦画面時に「ブロック」の文字を非表示にするためのクラス */
+        /* スマホ縦画面時に「ブロック`の文字を非表示にするためのクラス */
         .legend-text { display: inline; }
 
         /* 画面右上の操作ボタン群 */
@@ -1274,24 +1274,6 @@
         const orbitalPanelElem = document.getElementById('orbitalPanel');
         const rightBottomGroup = document.getElementById('rightBottomGroup');
 
-        const cardObserver = new ResizeObserver(entries => {
-            for (let entry of entries) {
-                const w = entry.contentRect.width;
-                const scale = w / 240;
-                cardElem.style.setProperty('--card-scale', Math.max(0.55, Math.min(scale * 1.0, 2.8)));
-            }
-        });
-        cardObserver.observe(cardElem);
-
-        const orbitalObserver = new ResizeObserver(entries => {
-            for (let entry of entries) {
-                const w = entry.contentRect.width;
-                const scale = w / 220;
-                orbitalPanelElem.style.setProperty('--scale', Math.max(0.65, Math.min(scale, 2.5)));
-            }
-        });
-        orbitalObserver.observe(orbitalPanelElem);
-
         let isResizingCard = false;
         let cardStartX = 0, cardStartY = 0, cardStartW = 0;
 
@@ -1345,30 +1327,37 @@
             const maxAllowedH = window.innerHeight * 0.85;
 
             if (isResizingCard) {
-                // 右上/右下ハンドル：右へ引っ張ると拡大、左へ引っ張ると縮小
+                // 右上/右下ハンドル：右方向(+dx)で拡大、左方向(-dx)で縮小
                 const dx = clientX - cardStartX;
-                const ratio = 390 / 260; // 縦横比固定
-                let newW = Math.max(160, cardStartW + dx);
-                let newH = newW * ratio;
+                const dy = cardStartY - clientY;
+                const delta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
 
-                if (newW > maxAllowedW) { newW = maxAllowedW; newH = newW * ratio; }
-                if (newH > maxAllowedH) { newH = maxAllowedH; newW = newH / ratio; }
-
+                let newW = Math.max(150, cardStartW + delta);
+                if (newW > maxAllowedW) newW = maxAllowedW;
+                
+                // 幅（width）のみを指定し、aspect-ratioにより高さは自動追従させることで縮小できない問題を解消
                 cardElem.style.width = newW + 'px';
-                cardElem.style.height = newH + 'px';
-            }
-            if (isResizingOrbital) {
-                // 左上/左下ハンドル：左へ引っ張ると拡大、右へ引っ張ると縮小
-                const dx = clientX - orbitalStartX;
-                const ratio = 220 / 240; // 縦横比固定
-                let newW = Math.max(140, orbitalStartW - dx);
-                let newH = newW * ratio;
+                cardElem.style.height = ''; // 高さはアスペクト比に任せる
 
-                if (newW > maxAllowedW) { newW = maxAllowedW; newH = newW * ratio; }
-                if (newH > maxAllowedH) { newH = maxAllowedH; newW = newH / ratio; }
+                // 内部のスケール変数を更新
+                const scale = newW / 240;
+                cardElem.style.setProperty('--card-scale', Math.max(0.55, Math.min(scale, 2.8)));
+            }
+
+            if (isResizingOrbital) {
+                // 左上/左下ハンドル：左方向(-dx)で拡大、右方向(+dx)で縮小
+                const dx = orbitalStartX - clientX;
+                const dy = orbitalStartY - clientY;
+                const delta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
+
+                let newW = Math.max(130, orbitalStartW + delta);
+                if (newW > maxAllowedW) newW = maxAllowedW;
 
                 orbitalPanelElem.style.width = newW + 'px';
-                orbitalPanelElem.style.height = newH + 'px';
+                orbitalPanelElem.style.height = '';
+
+                const scale = newW / 220;
+                orbitalPanelElem.style.setProperty('--scale', Math.max(0.65, Math.min(scale, 2.5)));
             }
         }
 
