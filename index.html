@@ -189,7 +189,8 @@
             border: 1px solid rgba(0, 240, 255, 0.5); 
             padding: calc(8px * var(--card-scale, 1)) calc(10px * var(--card-scale, 1)); border-radius: 14px;
             width: clamp(220px, 24vw, 290px); 
-            aspect-ratio: 260 / 390; overflow: hidden; display: none; flex-direction: column; justify-content: space-between; pointer-events: auto;
+            aspect-ratio: 260 / 390;
+            overflow: hidden; display: none; flex-direction: column; justify-content: space-between; pointer-events: auto;
             box-shadow: 0 4px 20px rgba(0, 240, 255, 0.15);
             transition: border-color 0.2s, box-shadow 0.2s;
             font-size: calc(1rem * var(--card-scale, 1));
@@ -319,18 +320,25 @@
                 font-size: 0.68rem;
             }
 
-            /* カード類がフッターと被らないようにクリアランスを確保 */
+            /* スマホ・縦画面ではフッターを非表示にする */
+            footer {
+                display: none;
+            }
+
+            /* カード類が画面一番下にピッタリ密着するように調整（浮きをなくす） */
             .card {
                 width: clamp(170px, 42vw, 210px);
                 left: 8px;
-                bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+                bottom: env(safe-area-inset-bottom, 0px);
+                border-bottom-left-radius: 0;
             }
             .right-bottom-group {
                 right: 8px;
-                bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+                bottom: env(safe-area-inset-bottom, 0px);
             }
             .orbital-preview-panel {
                 width: clamp(150px, 38vw, 190px);
+                border-bottom-right-radius: 0;
             }
         }
     </style>
@@ -612,7 +620,13 @@
         const ctx = canvas.getContext('2d');
 
         let rotX = 0.35, rotY = 0.5;
-        let zoom = 0.7;
+        
+        // スマホ・縦画面表示のときは初期ズームを小さくしてはみ出しを防ぐ
+        const initW = window.innerWidth || document.documentElement.clientWidth || 800;
+        const initH = window.innerHeight || document.documentElement.clientHeight || 600;
+        const isInitPortrait = initH > initW || initW <= 768;
+        let zoom = isInitPortrait ? 0.45 : 0.7;
+
         let autoRotate = true;
         let isDragging = false;
         let lastMouse = { x: 0, y: 0 };
@@ -1332,7 +1346,7 @@
 
             if (isResizingCard) {
                 const dx = clientX - cardStartX;
-                const ratio = 390 / 260;
+                const ratio = 390 / 260; // 縦横比固定
                 let newW = Math.max(180, cardStartW + dx);
                 let newH = newW * ratio;
 
@@ -1344,7 +1358,7 @@
             }
             if (isResizingOrbital) {
                 const dx = clientX - orbitalStartX;
-                const ratio = 220 / 240;
+                const ratio = 220 / 240; // 縦横比固定
                 let newW = Math.max(150, orbitalStartW - dx);
                 let newH = newW * ratio;
 
@@ -1585,7 +1599,7 @@
         // コントロールボタン用関数
         function changeZoom(delta) { zoom = Math.max(0.3, Math.min(zoom + delta, 2.5)); }
         function toggleAutoRotate() { autoRotate = !autoRotate; }
-        function resetView() { rotX = 0.35; rotY = 0.5; zoom = 0.7; }
+        function resetView() { rotX = 0.35; rotY = 0.5; zoom = isInitPortrait ? 0.45 : 0.7; }
 
         // アプリケーション起動
         resize();
