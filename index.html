@@ -87,7 +87,7 @@
         }
         .dot { width: clamp(7px, 0.9vw, 10px); height: clamp(7px, 0.9vw, 10px); border-radius: 50%; display: inline-block; margin-right: 5px; box-shadow: 0 0 5px currentColor; }
 
-        /* スマホ縦画面時に「ブロック`の文字を非表示にするためのクラス */
+        /* スマホ縦画面時に「ブロック」の文字を非表示にするためのクラス */
         .legend-text { display: inline; }
 
         /* 画面右上の操作ボタン群 */
@@ -182,14 +182,14 @@
             display: flex; justify-content: center; align-items: center;
         }
 
-        /* 元素情報詳細カードパネル */
+        /* 元素情報詳細カードパネル（初期サイズは幅260px、高さ390pxの比率1.5に固定） */
         .card {
             position: absolute; bottom: clamp(8px, 1.5vh, 20px); left: clamp(8px, 1.5vw, 20px); z-index: 20;
             background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px);
             border: 1px solid rgba(0, 240, 255, 0.5); 
             padding: calc(8px * var(--card-scale, 1)) calc(10px * var(--card-scale, 1)); border-radius: 14px;
-            width: clamp(220px, 24vw, 290px); 
-            aspect-ratio: 260 / 390;
+            width: 260px; 
+            height: 390px;
             overflow: hidden; display: none; flex-direction: column; justify-content: space-between; pointer-events: auto;
             box-shadow: 0 4px 20px rgba(0, 240, 255, 0.15);
             transition: border-color 0.2s, box-shadow 0.2s;
@@ -327,7 +327,6 @@
 
             /* カード類が画面一番下にピッタリ密着するように調整（浮きをなくす） */
             .card {
-                width: clamp(170px, 42vw, 210px);
                 left: 8px;
                 bottom: env(safe-area-inset-bottom, 0px);
                 border-bottom-left-radius: 0;
@@ -1323,41 +1322,45 @@
         });
 
         function handleResizeMove(clientX, clientY) {
-            const maxAllowedW = window.innerWidth * 0.9;
-            const maxAllowedH = window.innerHeight * 0.85;
+            const maxAllowedW = Math.min(window.innerWidth * 0.45, window.innerHeight * 0.75 / 1.5);
+            const minAllowedW = 160;
+            const cardAspectRatio = 390 / 260; // 1.5
 
             if (isResizingCard) {
-                // 右上/右下ハンドル：右方向(+dx)で拡大、左方向(-dx)で縮小
+                // 右上/右下ハンドル：右方向(+dx)や上方向(-dy)で拡大、逆で縮小
                 const dx = clientX - cardStartX;
                 const dy = cardStartY - clientY;
                 const delta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
 
-                let newW = Math.max(150, cardStartW + delta);
-                if (newW > maxAllowedW) newW = maxAllowedW;
-                
-                // 幅（width）のみを指定し、aspect-ratioにより高さは自動追従させることで縮小できない問題を解消
-                cardElem.style.width = newW + 'px';
-                cardElem.style.height = ''; // 高さはアスペクト比に任せる
+                let newW = Math.max(minAllowedW, Math.min(maxAllowedW, cardStartW + delta));
+                let newH = newW * cardAspectRatio;
 
-                // 内部のスケール変数を更新
-                const scale = newW / 240;
-                cardElem.style.setProperty('--card-scale', Math.max(0.55, Math.min(scale, 2.8)));
+                // 縦横比を完全に一致させたまま幅と高さを同時に正確に適用
+                cardElem.style.width = newW + 'px';
+                cardElem.style.height = newH + 'px';
+
+                // 内部のスケール変数を更新して中の文字や部品も連動して拡大縮小
+                const scale = newW / 260;
+                cardElem.style.setProperty('--card-scale', Math.max(0.6, Math.min(scale, 2.2)));
             }
 
             if (isResizingOrbital) {
-                // 左上/左下ハンドル：左方向(-dx)で拡大、右方向(+dx)で縮小
+                const maxOrbW = window.innerWidth * 0.45;
+                const minOrbW = 140;
+                const orbitalAspectRatio = 220 / 240;
+
                 const dx = orbitalStartX - clientX;
                 const dy = orbitalStartY - clientY;
                 const delta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
 
-                let newW = Math.max(130, orbitalStartW + delta);
-                if (newW > maxAllowedW) newW = maxAllowedW;
+                let newW = Math.max(minOrbW, Math.min(maxOrbW, orbitalStartW + delta));
+                let newH = newW * orbitalAspectRatio;
 
                 orbitalPanelElem.style.width = newW + 'px';
-                orbitalPanelElem.style.height = '';
+                orbitalPanelElem.style.height = newH + 'px';
 
-                const scale = newW / 220;
-                orbitalPanelElem.style.setProperty('--scale', Math.max(0.65, Math.min(scale, 2.5)));
+                const scale = newW / 240;
+                orbitalPanelElem.style.setProperty('--scale', Math.max(0.65, Math.min(scale, 2.2)));
             }
         }
 
