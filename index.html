@@ -53,13 +53,13 @@
         }
         #canvas:active { cursor: grabbing; }
 
-        /* 左上のロゴ・説明文パネル */
+        /* 左上のロゴ・説明文パネル（凡例パネルと同じ一番上の高さに統一） */
         .ui-panel {
             position: absolute; top: clamp(8px, 1.5vh, 20px); left: clamp(8px, 1.5vw, 20px); z-index: 10;
             background: transparent; border: none; padding: 0; box-shadow: none; backdrop-filter: none;
             pointer-events: none;
             max-width: clamp(170px, 24vw, 240px);
-            display: flex; flex-direction: column; gap: clamp(6px, 1vh, 10px);
+            display: flex; flex-direction: column; gap: clamp(4px, 0.8vh, 8px);
         }
         .ui-panel img {
             width: 100%;
@@ -131,34 +131,43 @@
             touch-action: none;
         }
         .resize-handle-tl {
-            position: absolute; top: 0; left: 0; width: 30px; height: 30px;
+            position: absolute; top: 0; left: 0; width: 45px; height: 45px;
             cursor: nwse-resize; z-index: 30;
-            border-top: 4px solid #ff007f; border-left: 4px solid #ff007f;
+            background: linear-gradient(135deg, rgba(255, 0, 127, 0.8) 0%, rgba(255, 0, 127, 0.15) 65%);
+            clip-path: polygon(0 0, 100% 0, 0 100%);
+            border-top: 2px solid #ff007f; border-left: 2px solid #ff007f;
             border-top-left-radius: 14px; touch-action: none;
         }
         .resize-handle-bl {
-            position: absolute; bottom: 0; left: 0; width: 30px; height: 30px;
+            position: absolute; bottom: 0; left: 0; width: 45px; height: 45px;
             cursor: nesw-resize; z-index: 30;
-            border-bottom: 4px solid #ff007f; border-left: 4px solid #ff007f;
+            background: linear-gradient(45deg, rgba(255, 0, 127, 0.8) 0%, rgba(255, 0, 127, 0.15) 65%);
+            clip-path: polygon(0 0, 0 100%, 100% 100%);
+            border-bottom: 2px solid #ff007f; border-left: 2px solid #ff007f;
             border-bottom-left-radius: 14px; touch-action: none;
         }
 
         .orbital-preview-header {
             display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; flex-shrink: 0;
-            padding-right: 2px; 
+            padding-left: 36px; 
+            padding-right: 4px; 
         }
         .orbital-preview-title {
             font-size: calc(0.78rem * var(--scale, 1)); font-weight: 800; color: #00f0ff;
             font-family: monospace; letter-spacing: 0.5px;
+            text-align: center;
+            flex-grow: 1;
         }
         .unpin-btn {
             background: transparent; border: none;
-            font-size: calc(1.4rem * var(--scale, 1)); cursor: pointer; transition: transform 0.2s;
-            line-height: 1; padding: 2px 4px; color: #f8fafc; font-weight: normal;
-            margin-right: 2px;
-            transform: translateY(2px);
+            font-size: calc(1.6rem * var(--scale, 1)); cursor: pointer; transition: transform 0.2s;
+            line-height: 1; padding: 4px 8px; color: #f8fafc; font-weight: bold;
+            margin-right: 8px;
+            margin-top: 4px;
+            transform: translateY(0px);
+            flex-shrink: 0;
         }
-        .unpin-btn:hover { transform: translateY(2px) scale(1.15); color: #ff007f; }
+        .unpin-btn:hover { transform: scale(1.15); color: #ff007f; }
 
         .orbital-canvas-box {
             width: 100%; flex-grow: 1; min-height: 0; border-radius: 6px;
@@ -187,15 +196,19 @@
             touch-action: none;
         }
         .resize-handle-tr {
-            position: absolute; top: 0; right: 0; width: 30px; height: 30px;
+            position: absolute; top: 0; right: 0; width: 45px; height: 45px;
             cursor: nesw-resize; z-index: 30;
-            border-top: 4px solid #ff007f; border-right: 4px solid #ff007f;
+            background: linear-gradient(225deg, rgba(255, 0, 127, 0.8) 0%, rgba(255, 0, 127, 0.15) 65%);
+            clip-path: polygon(0 0, 100% 0, 100% 100%);
+            border-top: 2px solid #ff007f; border-right: 2px solid #ff007f;
             border-top-right-radius: 14px; touch-action: none;
         }
         .resize-handle-br {
-            position: absolute; bottom: 0; right: 0; width: 30px; height: 30px;
+            position: absolute; bottom: 0; right: 0; width: 45px; height: 45px;
             cursor: nwse-resize; z-index: 30;
-            border-bottom: 4px solid #ff007f; border-right: 4px solid #ff007f;
+            background: linear-gradient(315deg, rgba(255, 0, 127, 0.8) 0%, rgba(255, 0, 127, 0.15) 65%);
+            clip-path: polygon(100% 0, 0 100%, 100% 100%);
+            border-bottom: 2px solid #ff007f; border-right: 2px solid #ff007f;
             border-bottom-right-radius: 14px; touch-action: none;
         }
 
@@ -209,6 +222,13 @@
         }
         .card-header-left { display: flex; align-items: center; gap: calc(8px * var(--card-scale, 1)); }
         
+        .card .unpin-btn {
+            font-size: calc(1.6rem * var(--card-scale, 1));
+            padding: calc(4px * var(--card-scale, 1)) calc(8px * var(--card-scale, 1));
+            margin-right: calc(8px * var(--card-scale, 1));
+            margin-top: calc(4px * var(--card-scale, 1));
+        }
+
         .card-num { font-size: calc(0.88rem * var(--card-scale, 1)); color: #ff007f; font-weight: 800; font-family: monospace; }
         .card-mass { font-size: calc(0.80rem * var(--card-scale, 1)); color: #94a3b8; font-weight: 700; font-family: monospace; }
 
@@ -253,15 +273,16 @@
         .tag-origin { background: rgba(29, 78, 216, 0.2); color: #60a5fa; border: 1px solid rgba(29, 78, 216, 0.4); }
         .tag-state { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
 
-        /* フッターの著作権・データ出所表示（二行に分けて中央配置） */
+        /* フッターの表示調整（画面下のセーフエリア対応） */
         footer {
-            position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
-            width: 100%; max-width: 600px; padding: 0 10px;
+            position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+            width: 100%; max-width: 600px; padding: 0 16px;
             z-index: 5; font-size: clamp(0.55rem, 0.5rem + 0.15vw, 0.68rem); color: #94a3b8;
             text-align: center; pointer-events: none;
             font-weight: 600;
-            line-height: 1.4;
+            line-height: 1.35;
             text-shadow: 0 0 6px rgba(0, 240, 255, 0.3);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
         }
 
         /* ==========================================
@@ -269,11 +290,11 @@
          * ========================================== */
         @media (max-width: 768px), (orientation: portrait) {
             .ui-panel {
-                max-width: 185px; 
+                max-width: 170px; 
             }
             .ui-subtext {
                 display: block; 
-                font-size: 0.62rem;
+                font-size: 0.60rem;
             }
             .top-legend {
                 font-size: 0.65rem;
@@ -286,7 +307,6 @@
                 height: 6px;
                 margin-right: 3px;
             }
-            /* スマホ縦画面のとき「ブロック」の文字を非表示にする */
             .legend-text {
                 display: none;
             }
@@ -298,17 +318,19 @@
                 padding: 4px 8px;
                 font-size: 0.68rem;
             }
+
+            /* カード類がフッターと被らないようにクリアランスを確保 */
             .card {
-                width: clamp(180px, 45vw, 220px);
+                width: clamp(170px, 42vw, 210px);
                 left: 8px;
-                bottom: 24px;
+                bottom: calc(28px + env(safe-area-inset-bottom, 0px));
             }
             .right-bottom-group {
                 right: 8px;
-                bottom: 24px;
+                bottom: calc(28px + env(safe-area-inset-bottom, 0px));
             }
             .orbital-preview-panel {
-                width: clamp(160px, 40vw, 200px);
+                width: clamp(150px, 38vw, 190px);
             }
         }
     </style>
@@ -620,7 +642,7 @@
         window.addEventListener('resize', resize);
         resize();
 
-        // 3D座標を2Dスクリーン座標に変換
+        // 3D座標を2Dスクリーン座標に変換（縦画面時は中心Yを少し上にシフト）
         function projectRaw(x, y, z) {
             let x1 = x * Math.cos(rotY) + z * Math.sin(rotY);
             let z1 = -x * Math.sin(rotY) + z * Math.cos(rotY);
@@ -630,11 +652,15 @@
             const screenW = canvas.width / dpr;
             const screenH = canvas.height / dpr;
 
+            // 縦画面（スマホ・タブレット）のときは、周期表の中心を画面上寄りにオフセット
+            const isPortrait = screenH > screenW || screenW <= 768;
+            const centerYOffset = isPortrait ? -screenH * 0.12 : 0;
+
             const cameraZ = 1100 / zoom;
             const fov = 750;
             const scale = fov / (cameraZ + z2);
 
-            return { x: screenW / 2 + x1 * scale, y: screenH / 2 + y2 * scale, scale: scale, z2: z2 };
+            return { x: screenW / 2 + x1 * scale, y: (screenH / 2 + centerYOffset) + y2 * scale, scale: scale, z2: z2 };
         }
 
         function project(p) { return projectRaw(p.x, p.y, p.z); }
@@ -709,10 +735,13 @@
             ctx.clearRect(0, 0, screenW, screenH);
 
             ctx.save();
-            // 周期表の下からの控えめなグロー効果
+            // 周期表の下からの背景グロー効果
+            const isPortrait = screenH > screenW || screenW <= 768;
+            const glowCenterY = isPortrait ? screenH * 0.8 : screenH + 80;
+
             const underGlow = ctx.createRadialGradient(
-                screenW / 2, screenH + 80, 40,
-                screenW / 2, screenH, screenH * 0.85
+                screenW / 2, glowCenterY, 40,
+                screenW / 2, screenH / 2, screenH * 0.85
             );
             underGlow.addColorStop(0, 'rgba(0, 240, 255, 0.18)');
             underGlow.addColorStop(0.35, 'rgba(168, 85, 247, 0.11)');
@@ -1165,7 +1194,7 @@
             orbitalCtx.save();
             orbitalCtx.translate(cX, cY);
 
-            // 背景グロー（高DPR端末でも主張しすぎない柔らかいグラデーションに調整）
+            // 背景グロー
             const glowRadius = minCanvasDim * 0.6;
             const glowGrad = orbitalCtx.createRadialGradient(0, 0, 1, 0, 0, glowRadius);
             const baseColor = COLOR_MAP[block]?.highlight || '#00d2ff';
@@ -1180,7 +1209,7 @@
             orbitalCtx.fill();
             orbitalCtx.globalAlpha = 1.0;
 
-            // 中心の中央点（シャドウブラーがDPR拡大で濃く重なるのを防止）
+            // 中心の中央点
             const coreRadius = Math.max(1, minCanvasDim * (isS ? 0.015 : 0.008));
             orbitalCtx.beginPath();
             orbitalCtx.arc(0, 0, coreRadius, 0, Math.PI * 2);
