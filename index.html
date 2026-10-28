@@ -348,8 +348,8 @@
     <canvas id="canvas"></canvas>
 
     <!-- 画面左上のロゴパネル -->
-    <div class="ui-panel">
-        <img src="logo.svg" alt="PERIOLIX 3D Logo">
+    <div class="ui-panel" id="uiPanel">
+        <img src="logo.svg" alt="PERIOLIX 3D Logo" id="logoImg">
         <div class="ui-subtext">画面ドラッグ/スワイプで、3D周期表を好きな角度で表示できます。<br>元素をクリック/タッチすると元素カードと軌道ビューアが表示されます。</div>
     </div>
 
@@ -1272,6 +1272,7 @@
         const cardElem = document.getElementById('card');
         const orbitalPanelElem = document.getElementById('orbitalPanel');
         const rightBottomGroup = document.getElementById('rightBottomGroup');
+        const logoImg = document.getElementById('logoImg');
 
         let isResizingCard = false;
         let cardStartX = 0, cardStartY = 0, cardStartW = 0;
@@ -1322,12 +1323,22 @@
         });
 
         function handleResizeMove(clientX, clientY) {
-            const maxAllowedW = Math.min(window.innerWidth * 0.45, window.innerHeight * 0.75 / 1.5);
-            const minAllowedW = 160;
+            // ロゴ画像のすぐ下の位置（ロゴの底辺のY座標）を算出して、そこを超えて重ならないように最大高さを動的に制限
+            const logoRect = logoImg ? logoImg.getBoundingClientRect() : { bottom: 120 };
+            const screenH = window.innerHeight;
+            const maxAllowedHeightFromLogo = screenH - logoRect.bottom - 24; // ロゴ下から画面下までの余白
             const cardAspectRatio = 390 / 260; // 1.5
 
+            const isPortrait = screenH > window.innerWidth || window.innerWidth <= 768;
+            const maxAllowedWByWidth = isPortrait ? window.innerWidth * 0.75 : window.innerWidth * 0.45;
+            
+            // ロゴの下端にぶつからない最大の幅を計算
+            const maxAllowedWByLogo = maxAllowedHeightFromLogo / cardAspectRatio;
+            const maxAllowedW = Math.min(maxAllowedWByWidth, maxAllowedWByLogo);
+
+            const minAllowedW = 160;
+
             if (isResizingCard) {
-                // 右上/右下ハンドル：右方向(+dx)や上方向(-dy)で拡大、逆で縮小
                 const dx = clientX - cardStartX;
                 const dy = cardStartY - clientY;
                 const delta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
@@ -1335,17 +1346,15 @@
                 let newW = Math.max(minAllowedW, Math.min(maxAllowedW, cardStartW + delta));
                 let newH = newW * cardAspectRatio;
 
-                // 縦横比を完全に一致させたまま幅と高さを同時に正確に適用
                 cardElem.style.width = newW + 'px';
                 cardElem.style.height = newH + 'px';
 
-                // 内部のスケール変数を更新して中の文字や部品も連動して拡大縮小
                 const scale = newW / 260;
-                cardElem.style.setProperty('--card-scale', Math.max(0.6, Math.min(scale, 2.2)));
+                cardElem.style.setProperty('--card-scale', Math.max(0.6, Math.min(scale, 3.0)));
             }
 
             if (isResizingOrbital) {
-                const maxOrbW = window.innerWidth * 0.45;
+                const maxOrbW = isPortrait ? window.innerWidth * 0.75 : window.innerWidth * 0.45;
                 const minOrbW = 140;
                 const orbitalAspectRatio = 220 / 240;
 
@@ -1360,7 +1369,7 @@
                 orbitalPanelElem.style.height = newH + 'px';
 
                 const scale = newW / 240;
-                orbitalPanelElem.style.setProperty('--scale', Math.max(0.65, Math.min(scale, 2.2)));
+                orbitalPanelElem.style.setProperty('--scale', Math.max(0.65, Math.min(scale, 3.0)));
             }
         }
 
