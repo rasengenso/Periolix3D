@@ -1323,16 +1323,17 @@
         });
 
         function handleResizeMove(clientX, clientY) {
-            // ロゴ画像のすぐ下の位置（ロゴの底辺のY座標）を算出して、そこを超えて重ならないように最大高さを動的に制限
             const logoRect = logoImg ? logoImg.getBoundingClientRect() : { bottom: 120 };
             const screenH = window.innerHeight;
-            const maxAllowedHeightFromLogo = screenH - logoRect.bottom - 24; // ロゴ下から画面下までの余白
+            const screenW = window.innerWidth;
+            const maxAllowedHeightFromLogo = screenH - logoRect.bottom - 24; 
             const cardAspectRatio = 390 / 260; // 1.5
 
-            const isPortrait = screenH > window.innerWidth || window.innerWidth <= 768;
-            const maxAllowedWByWidth = isPortrait ? window.innerWidth * 0.75 : window.innerWidth * 0.45;
+            const isPortrait = screenH > screenW || screenW <= 768;
             
-            // ロゴの下端にぶつからない最大の幅を計算
+            // 【修正】スマホ縦画面時は横幅いっぱい（左右8pxずつのマージンを引いた screenW - 16）を最大制限にする
+            const maxAllowedWByWidth = isPortrait ? (screenW - 16) : screenW * 0.45;
+            
             const maxAllowedWByLogo = maxAllowedHeightFromLogo / cardAspectRatio;
             const maxAllowedW = Math.min(maxAllowedWByWidth, maxAllowedWByLogo);
 
@@ -1344,7 +1345,7 @@
                 const delta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
 
                 let newW = Math.max(minAllowedW, Math.min(maxAllowedW, cardStartW + delta));
-                let newH = newW * cardAspectRatio;
+                let newH = newW * cardAspectRatio; // 縦横比固定
 
                 cardElem.style.width = newW + 'px';
                 cardElem.style.height = newH + 'px';
@@ -1354,7 +1355,8 @@
             }
 
             if (isResizingOrbital) {
-                const maxOrbW = isPortrait ? window.innerWidth * 0.75 : window.innerWidth * 0.45;
+                // 【修正】軌道ビューアカードも同様にスマホ縦画面時は横幅いっぱい（screenW - 16）を最大制限にする
+                const maxOrbW = isPortrait ? (screenW - 16) : screenW * 0.45;
                 const minOrbW = 140;
                 const orbitalAspectRatio = 220 / 240;
 
@@ -1363,7 +1365,7 @@
                 const delta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
 
                 let newW = Math.max(minOrbW, Math.min(maxOrbW, orbitalStartW + delta));
-                let newH = newW * orbitalAspectRatio;
+                let newH = newW * orbitalAspectRatio; // 縦横比固定
 
                 orbitalPanelElem.style.width = newW + 'px';
                 orbitalPanelElem.style.height = newH + 'px';
